@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:pedidos_restaurante/app/pedidos_app.dart';
+import 'package:flutter_pedidos/app/pedidos_app.dart';
 
 void main() {
   testWidgets('shows app home and settings entry point', (

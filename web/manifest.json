@@ -1,6 +1,6 @@
 {
-    "name": "pedidos_restaurante",
-    "short_name": "pedidos_restaurante",
+    "name": "flutter_pedidos",
+    "short_name": "flutter_pedidos",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

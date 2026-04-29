@@ -1,4 +1,4 @@
-# Resumo do projeto pedidos_restaurante
+# Resumo do projeto flutter_pedidos
 
 Este arquivo resume o que foi feito ate agora na recriacao do sistema Delphi/PHP em Flutter. O objetivo do projeto nao e converter o Delphi literalmente, mas recriar o fluxo operacional em modulos pequenos, usando Flutter como novo app e mantendo compatibilidade inicial com os scripts PHP existentes.
 

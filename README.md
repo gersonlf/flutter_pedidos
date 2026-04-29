@@ -1,4 +1,4 @@
-# pedidos_restaurante
+# flutter_pedidos
 
 A new Flutter project.
 

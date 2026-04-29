@@ -1,4 +1,4 @@
-package com.example.pedidos_restaurante
+package com.example.flutter_pedidos
 
 import io.flutter.embedding.android.FlutterActivity
 

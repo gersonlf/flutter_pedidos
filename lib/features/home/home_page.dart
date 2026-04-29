@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/config/app_config_store.dart';
+import '../../core/models/empresa_config.dart';
 import '../../core/models/funcionario.dart';
+import '../company/company_repository.dart';
 import '../commands/command_selection.dart';
 import '../commands/command_selection_page.dart';
 import '../employees/employee_selection_page.dart';
@@ -20,20 +22,40 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<AppConfig> _configFuture;
+  late Future<_HomeData> _homeFuture;
   Funcionario? _selectedEmployee;
   CommandSelection? _selectedCommand;
 
   @override
   void initState() {
     super.initState();
-    _configFuture = widget.configStore.load();
+    _homeFuture = _loadHomeData();
   }
 
   void _reloadConfig() {
     setState(() {
-      _configFuture = widget.configStore.load();
+      _homeFuture = _loadHomeData();
     });
+  }
+
+  Future<_HomeData> _loadHomeData() async {
+    final config = await widget.configStore.load();
+    if (!config.isServerConfigured) {
+      return _HomeData(config: config, companyConfig: EmpresaConfig.defaults());
+    }
+
+    try {
+      final companyConfig = await CompanyRepository(
+        config: config,
+      ).fetchCompanyConfig();
+      return _HomeData(config: config, companyConfig: companyConfig);
+    } catch (error) {
+      return _HomeData(
+        config: config,
+        companyConfig: EmpresaConfig.defaults(),
+        companyError: error.toString(),
+      );
+    }
   }
 
   Future<void> _openSettings(AppConfig config) async {
@@ -64,7 +86,10 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _selectCommand(AppConfig config) async {
+  Future<void> _selectCommand(
+    AppConfig config,
+    EmpresaConfig companyConfig,
+  ) async {
     final employee = _selectedEmployee;
     if (employee == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,8 +100,11 @@ class _HomePageState extends State<HomePage> {
 
     final command = await Navigator.of(context).push<CommandSelection>(
       MaterialPageRoute(
-        builder: (_) =>
-            CommandSelectionPage(config: config, employee: employee),
+        builder: (_) => CommandSelectionPage(
+          config: config,
+          employee: employee,
+          companyConfig: companyConfig,
+        ),
       ),
     );
 
@@ -87,9 +115,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _openItems(AppConfig config) async {
+  Future<void> _openItems(AppConfig config, EmpresaConfig companyConfig) async {
     final employee = _selectedEmployee;
-    final command = _selectedCommand;
+    var command = _selectedCommand;
 
     if (employee == null || command == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,20 +126,43 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    command = await _applyCommandRequirements(command, companyConfig);
+    if (command == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _selectedCommand = command;
+    });
+
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) =>
-            ItemListPage(config: config, employee: employee, command: command),
+        builder: (_) => ItemListPage(
+          config: config,
+          employee: employee,
+          command: command!,
+          companyConfig: companyConfig,
+        ),
       ),
     );
   }
 
-  Future<void> _openKitchen(AppConfig config) async {
+  Future<void> _openKitchen(
+    AppConfig config,
+    EmpresaConfig companyConfig,
+  ) async {
     final employee = _selectedEmployee;
 
     if (employee == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecione um funcionario primeiro.')),
+      );
+      return;
+    }
+
+    if (!companyConfig.controlaCozinha) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Modulo de cozinha desabilitado.')),
       );
       return;
     }
@@ -123,12 +174,67 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<CommandSelection?> _applyCommandRequirements(
+    CommandSelection command,
+    EmpresaConfig companyConfig,
+  ) async {
+    var resolved = command;
+
+    if (companyConfig.controlaMesa && resolved.codigoMesa <= 0) {
+      final mesa = await _askRequiredNumber(
+        title: 'Mesa da comanda',
+        label: 'Mesa',
+        icon: Icons.table_restaurant_outlined,
+      );
+
+      if (mesa == null) {
+        return null;
+      }
+
+      resolved = resolved.copyWith(codigoMesa: mesa);
+    }
+
+    if (companyConfig.controlaTag && resolved.codigoTag <= 0) {
+      final tag = await _askRequiredNumber(
+        title: 'Tag da comanda',
+        label: 'Tag',
+        icon: Icons.sell_outlined,
+      );
+
+      if (tag == null) {
+        return null;
+      }
+
+      resolved = resolved.copyWith(codigoTag: tag);
+    }
+
+    return resolved;
+  }
+
+  Future<int?> _askRequiredNumber({
+    required String title,
+    required String label,
+    required IconData icon,
+  }) {
+    return showDialog<int>(
+      context: context,
+      builder: (_) =>
+          _RequiredNumberDialog(title: title, label: label, icon: icon),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AppConfig>(
-      future: _configFuture,
+    return FutureBuilder<_HomeData>(
+      future: _homeFuture,
       builder: (context, snapshot) {
-        final config = snapshot.data ?? AppConfig.defaults();
+        final homeData =
+            snapshot.data ??
+            _HomeData(
+              config: AppConfig.defaults(),
+              companyConfig: EmpresaConfig.defaults(),
+            );
+        final config = homeData.config;
 
         return Scaffold(
           appBar: AppBar(
@@ -145,13 +251,17 @@ class _HomePageState extends State<HomePage> {
               ? const Center(child: CircularProgressIndicator())
               : _HomeContent(
                   config: config,
+                  companyConfig: homeData.companyConfig,
+                  companyError: homeData.companyError,
                   selectedEmployee: _selectedEmployee,
                   selectedCommand: _selectedCommand,
                   onConfigure: () => _openSettings(config),
                   onSelectEmployee: () => _selectEmployee(config),
-                  onSelectCommand: () => _selectCommand(config),
-                  onOpenItems: () => _openItems(config),
-                  onOpenKitchen: () => _openKitchen(config),
+                  onSelectCommand: () =>
+                      _selectCommand(config, homeData.companyConfig),
+                  onOpenItems: () => _openItems(config, homeData.companyConfig),
+                  onOpenKitchen: () =>
+                      _openKitchen(config, homeData.companyConfig),
                 ),
         );
       },
@@ -162,6 +272,8 @@ class _HomePageState extends State<HomePage> {
 class _HomeContent extends StatelessWidget {
   const _HomeContent({
     required this.config,
+    required this.companyConfig,
+    required this.companyError,
     required this.selectedEmployee,
     required this.selectedCommand,
     required this.onConfigure,
@@ -172,6 +284,8 @@ class _HomeContent extends StatelessWidget {
   });
 
   final AppConfig config;
+  final EmpresaConfig companyConfig;
+  final String? companyError;
   final Funcionario? selectedEmployee;
   final CommandSelection? selectedCommand;
   final VoidCallback onConfigure;
@@ -187,6 +301,13 @@ class _HomeContent extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _ConnectionPanel(config: config, onConfigure: onConfigure),
+          if (companyError != null) ...[
+            const SizedBox(height: 16),
+            _CompanyRulesError(message: companyError!),
+          ] else if (config.isServerConfigured) ...[
+            const SizedBox(height: 16),
+            _CompanyRulesPanel(companyConfig: companyConfig),
+          ],
           const SizedBox(height: 16),
           _EmployeePanel(
             employee: selectedEmployee,
@@ -204,6 +325,7 @@ class _HomeContent extends StatelessWidget {
             configured: config.isServerConfigured,
             hasEmployee: selectedEmployee != null,
             hasCommand: selectedCommand != null,
+            kitchenEnabled: companyConfig.controlaCozinha,
             onSelectEmployee: onSelectEmployee,
             onSelectCommand: onSelectCommand,
             onOpenItems: onOpenItems,
@@ -355,11 +477,122 @@ class _ConnectionPanel extends StatelessWidget {
   }
 }
 
+class _CompanyRulesPanel extends StatelessWidget {
+  const _CompanyRulesPanel({required this.companyConfig});
+
+  final EmpresaConfig companyConfig;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.rule_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Regras da empresa', style: theme.textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _RuleChip(
+                  icon: Icons.table_restaurant_outlined,
+                  label: 'Mesa',
+                  enabled: companyConfig.controlaMesa,
+                ),
+                _RuleChip(
+                  icon: Icons.sell_outlined,
+                  label: 'Tag',
+                  enabled: companyConfig.controlaTag,
+                ),
+                _RuleChip(
+                  icon: Icons.room_service_outlined,
+                  label: 'Cozinha',
+                  enabled: companyConfig.controlaCozinha,
+                ),
+                _RuleChip(
+                  icon: Icons.swap_horiz_outlined,
+                  label: switch (companyConfig.controlaTroca) {
+                    TrocaComandaPolicy.exigeSenha => 'Troca com senha',
+                    TrocaComandaPolicy.desabilitada => 'Troca bloqueada',
+                    TrocaComandaPolicy.livre => 'Troca livre',
+                  },
+                  enabled:
+                      companyConfig.controlaTroca !=
+                      TrocaComandaPolicy.desabilitada,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RuleChip extends StatelessWidget {
+  const _RuleChip({
+    required this.icon,
+    required this.label,
+    required this.enabled,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Chip(
+      avatar: Icon(icon, size: 18),
+      label: Text(enabled ? label : '$label off'),
+      backgroundColor: enabled
+          ? theme.colorScheme.primaryContainer
+          : theme.colorScheme.surfaceContainerHighest,
+      side: BorderSide(color: theme.colorScheme.outlineVariant),
+    );
+  }
+}
+
+class _CompanyRulesError extends StatelessWidget {
+  const _CompanyRulesError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          Icons.warning_amber_outlined,
+          color: theme.colorScheme.error,
+        ),
+        title: const Text('Regras da empresa nao carregadas'),
+        subtitle: Text(message),
+      ),
+    );
+  }
+}
+
 class _ModuleGrid extends StatelessWidget {
   const _ModuleGrid({
     required this.configured,
     required this.hasEmployee,
     required this.hasCommand,
+    required this.kitchenEnabled,
     required this.onSelectEmployee,
     required this.onSelectCommand,
     required this.onOpenItems,
@@ -369,6 +602,7 @@ class _ModuleGrid extends StatelessWidget {
   final bool configured;
   final bool hasEmployee;
   final bool hasCommand;
+  final bool kitchenEnabled;
   final VoidCallback onSelectEmployee;
   final VoidCallback onSelectCommand;
   final VoidCallback onOpenItems;
@@ -420,7 +654,7 @@ class _ModuleGrid extends StatelessWidget {
                 0 => configured,
                 1 => configured && hasEmployee,
                 2 => configured && hasEmployee && hasCommand,
-                3 => configured && hasEmployee,
+                3 => configured && hasEmployee && kitchenEnabled,
                 _ => false,
               },
               onTap: switch (index) {
@@ -495,4 +729,80 @@ class _ModuleAction {
   final IconData icon;
   final String title;
   final String subtitle;
+}
+
+class _RequiredNumberDialog extends StatefulWidget {
+  const _RequiredNumberDialog({
+    required this.title,
+    required this.label,
+    required this.icon,
+  });
+
+  final String title;
+  final String label;
+  final IconData icon;
+
+  @override
+  State<_RequiredNumberDialog> createState() => _RequiredNumberDialogState();
+}
+
+class _RequiredNumberDialogState extends State<_RequiredNumberDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null || value <= 0) {
+      setState(() {
+        _error = 'Informe um valor valido';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _confirm(),
+        decoration: InputDecoration(
+          labelText: widget.label,
+          prefixIcon: Icon(widget.icon),
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _confirm, child: const Text('Confirmar')),
+      ],
+    );
+  }
+}
+
+class _HomeData {
+  const _HomeData({
+    required this.config,
+    required this.companyConfig,
+    this.companyError,
+  });
+
+  final AppConfig config;
+  final EmpresaConfig companyConfig;
+  final String? companyError;
 }

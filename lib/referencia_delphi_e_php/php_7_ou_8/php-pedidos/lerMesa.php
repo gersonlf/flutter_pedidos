@@ -1,13 +1,12 @@
 <?php
     header('Content-Type: application/json; charset=utf-8');
     include '_config.php';
+    include '_funcoes.php';
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         $qr  = 'select coalesce(mesa,0) mesa';
         $qr .= ' from vendas';
@@ -20,6 +19,10 @@
         $qr .= ' limit 1';
         $mysql = $mysqli->query($qr);
 
+        if (!$mysql) {
+            responderErro('Erro executando query em lerMesa.php: ' . $mysqli->error);
+        }
+
         if ($mysql->num_rows == 0) {
             $mesa = '-1';
         } else {
@@ -30,6 +33,5 @@
         $retorno = array();
         $retorno['mesa'] = $mesa;
         
-        echo json_encode($retorno);        
-    }
+        responderJson($retorno);        
 ?>        

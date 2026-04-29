@@ -4,11 +4,9 @@
     include '_funcoes.php';
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
         
         criarTabelaVendasTag($mysqli, $origem);
 
@@ -25,6 +23,10 @@
         $qr .= ' limit 1';
         $mysql = $mysqli->query($qr);
 
+        if (!$mysql) {
+            responderErro('Erro executando query em lerTag.php: ' . $mysqli->error);
+        }
+
         if ($mysql->num_rows == 0) {
             $tag = '-1';
         } else {
@@ -35,6 +37,5 @@
         $retorno = array();
         $retorno['tag'] = $tag;
         
-        echo json_encode($retorno);        
-    }
-?>  
+        responderJson($retorno);        
+?>        

@@ -4,11 +4,9 @@
     include '_funcoes.php';
     
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         $qr  = 'select';
         $qr .= ' codigo codigoVenda,';
@@ -21,6 +19,10 @@
         $qr .= ' order by item desc';
         $qr .= ' limit 1';
         $mysql = $mysqli->query($qr);   
+
+        if (!$mysql) {
+            responderErro('Erro executando query em incluirItem.php: ' . $mysqli->error);
+        }
 
         if ($mysql->num_rows == 0) {
             $codigoVenda = pegaSequencia($mysqli, 'seq_vendas', $origem);
@@ -53,6 +55,10 @@
         $qr .= ' ,origem=' . $origem;
         gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
         $mysql = $mysqli->query($qr);
+
+        if (!$mysql) {
+            responderErro('Erro executando query em incluirItem.php: ' . $mysqli->error);
+        }
   
         if ($data->observacao_item !== ''){
             $qr  = 'select codigo';
@@ -62,6 +68,10 @@
             $qr .= ' and origem=' .$origem;
             $qr .= ' limit 1';
             $mysql = $mysqli->query($qr);
+
+            if (!$mysql) {
+                responderErro('Erro executando query em incluirItem.php: ' . $mysqli->error);
+            }
 
             if ($mysql->num_rows == 0) {  
                 if ($data->observacao_item !== '') {
@@ -74,6 +84,10 @@
                     $qr .= ' ,data_inc="' . $dia . '"';
                     gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
                     $mysql = $mysqli->query($qr);                            
+
+                    if (!$mysql) {
+                        responderErro('Erro executando query em incluirItem.php: ' . $mysqli->error);
+                    }
                 }        
             } else {
                 $qr  = 'update vendas_obs set';
@@ -85,6 +99,10 @@
                 $qr .= ' and origem=' . $origem;
                 gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
                 $mysql = $mysqli->query($qr);                        
+
+                if (!$mysql) {
+                    responderErro('Erro executando query em incluirItem.php: ' . $mysqli->error);
+                }
             }    
         }
 
@@ -100,6 +118,10 @@
                 $qr .= ' ,tag=' . $codigoTag;
                 gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
                 $mysql = $mysqli->query($qr);    
+
+                if (!$mysql) {
+                    responderErro('Erro executando query em incluirItem.php: ' . $mysqli->error);
+                }
             }    
         }                    
         catch(Exception $e) {}
@@ -112,6 +134,10 @@
         $qr .= ' and item=' . $itemVenda;
         $qr .= ' and origem=' . $origem;
         $mysql = $mysqli->query($qr);
+
+        if (!$mysql) {
+            responderErro('Erro executando query em incluirItem.php: ' . $mysqli->error);
+        }
         
         $retorno = array();
 
@@ -120,6 +146,5 @@
         }
 
         //$retorno = utf8_string_array_encode($retorno);        
-        echo json_encode($retorno);         
-    }
-?>          
+        responderJson($retorno);         
+?>        

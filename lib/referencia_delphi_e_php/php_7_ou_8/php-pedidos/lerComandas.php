@@ -4,11 +4,9 @@
     include '_funcoes.php';
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         criarTabelaVendasTag($mysqli, $origem);    
 
@@ -42,6 +40,10 @@
         $qr .= ' order by a.cartao';
         $mysql = $mysqli->query($qr);
 
+        if (!$mysql) {
+            responderErro('Erro executando query em lerComandas.php: ' . $mysqli->error);
+        }
+
         //error_log('lerComanda');        
         //error_log($qr);
 
@@ -59,14 +61,12 @@
             $retorno[$conta]->codigo_tag = $row['codigo_tag'];            
             $retorno[$conta]->data_hora = $row['data_hora'];
             $retorno[$conta]->bloqueio = $row['bloqueio'];
-            $retorno[$conta]->nome_funcionario = utf8_encode($row['nome_funcionario']);
+            $retorno[$conta]->nome_funcionario = textoUtf8($row['nome_funcionario']);
             $retorno[$conta]->valor_total = $row['valor_total'];
 
             $conta++;            
         }
 
         //$retorno = utf8_string_array_encode($retorno);            
-        echo json_encode($retorno); 
-    }
-?>
-
+        responderJson($retorno); 
+?>        

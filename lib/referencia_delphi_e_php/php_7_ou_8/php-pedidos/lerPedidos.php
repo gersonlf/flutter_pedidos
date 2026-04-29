@@ -4,11 +4,9 @@
     include '_funcoes.php';
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         $qr  = 'select idt codigo_comanda';
         $qr .= ' from automacao_cozinha';
@@ -23,6 +21,10 @@
         $qr .= ' order by idt';        
         $mysql = $mysqli->query($qr); 
 
+        if (!$mysql) {
+            responderErro('Erro executando query em lerPedidos.php: ' . $mysqli->error);
+        }
+
         $retorno = array();
         $conta = 0;
 
@@ -33,6 +35,5 @@
             $conta++;
         }
 
-        echo json_encode($retorno);         
-    }
-?>           
+        responderJson($retorno);         
+?>        

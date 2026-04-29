@@ -1,10 +1,9 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import '../../core/config/app_config.dart';
 import '../../core/models/comanda.dart';
 import '../../core/models/funcionario.dart';
+import '../../core/network/api_client.dart';
 import 'command_selection.dart';
 
 class CommandRepository {
@@ -123,46 +122,43 @@ class CommandRepository {
     );
   }
 
+  Future<void> changeCommand({
+    required Funcionario employee,
+    required int codigoComanda,
+    required int novaComanda,
+    int itemVenda = 0,
+  }) async {
+    await _postJson(
+      scriptName: 'alterarComanda',
+      body: {
+        'codigo_comanda': codigoComanda.toString(),
+        'codigo_nova_comanda': novaComanda.toString(),
+        'codigo_funcionario': employee.codigo.toString(),
+        'nome_funcionario': employee.nome,
+        'item_venda': itemVenda.toString(),
+      },
+    );
+  }
+
   Future<Object?> _postJson({
     required String scriptName,
     required Map<String, String> body,
   }) async {
-    final client = _client ?? http.Client();
-
     try {
-      final response = await client
-          .post(
-            config.endpoint(scriptName),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (response.statusCode != 200) {
-        throw CommandRepositoryException(
-          'Erro no servidor (${response.statusCode}) ao acessar $scriptName.',
-        );
-      }
-
-      return jsonDecode(response.body);
+      return await ApiClient(config: config, client: _client).postJson(
+        scriptName: scriptName,
+        body: body,
+        failureMessage: 'Nao foi possivel acessar $scriptName',
+        invalidMessage: 'Resposta invalida do servidor.',
+      );
     } on CommandRepositoryException {
       rethrow;
-    } on FormatException catch (error) {
-      throw CommandRepositoryException(
-        'Resposta invalida do servidor: ${error.message}',
-      );
+    } on ApiClientException catch (error) {
+      throw CommandRepositoryException(error.message);
     } catch (error) {
       throw CommandRepositoryException(
         'Nao foi possivel acessar o servidor: $error',
       );
-    } finally {
-      if (_client == null) {
-        client.close();
-      }
     }
   }
 

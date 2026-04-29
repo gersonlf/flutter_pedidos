@@ -1,7 +1,82 @@
 <?php
+    function responderJson($payload, $statusCode = 200){
+        if (!headers_sent()) {
+            http_response_code($statusCode);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    function responderSucesso($mensagem = 'OK', $dados = array()){
+        $payload = array_merge(
+            array(
+                'sucesso' => true,
+                'mensagem' => $mensagem
+            ),
+            $dados
+        );
+
+        responderJson($payload);
+    }
+
+    function responderErro($mensagem, $statusCode = 500){
+        error_log($mensagem);
+        responderJson(
+            array(
+                'sucesso' => false,
+                'mensagem' => $mensagem
+            ),
+            $statusCode
+        );
+    }
+
+    function validarConexao($mysqli){
+        if (mysqli_connect_errno()) {
+            responderErro('Erro conectando ao banco: ' . mysqli_connect_error());
+        }
+    }
+
+    function lerJsonEntrada(){
+        $raw = file_get_contents('php://input');
+
+        if (trim($raw) === '') {
+            return (object) array();
+        }
+
+        $data = json_decode($raw);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            responderErro('JSON invalido: ' . json_last_error_msg(), 400);
+        }
+
+        return $data;
+    }
+
+    function textoUtf8($value){
+        if ($value === null) {
+            return '';
+        }
+
+        if (function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
+        }
+
+        if (function_exists('iconv')) {
+            return iconv('ISO-8859-1', 'UTF-8//IGNORE', $value);
+        }
+
+        return $value;
+    }
+
     function criarTabelaVendasTag($mysqli, $origem){
         $qr  = 'show tables like "vendas_tag"';
         $mysql = $mysqli->query($qr);
+
+        if (!$mysql) {
+            responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+        }
         
         if ($mysql->num_rows == 0) {
             $qr = 'create table if not exists vendas_tag (';
@@ -13,6 +88,10 @@
 
             gravarLog($mysqli, $qr, $origem, 'pedidos');            
             $mysql = $mysqli->query($qr);
+
+            if (!$mysql) {
+                responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+            }
         } 
     }
 
@@ -22,6 +101,10 @@
             $qr .= ' from seq_vendas';
             $qr .= ' limit 1';
             $mysql = $mysqli->query($qr);
+
+            if (!$mysql) {
+                responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+            }
 
             //error_log('funcoes - pegaSequencia');
             //error_log($qr);
@@ -44,6 +127,10 @@
             $qr .= ' set sequencia = ' . $idt;
             $mysql = $mysqli->query($qr);
 
+            if (!$mysql) {
+                responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+            }
+
             //error_log($idt);                        
 
             return $idt . $origem;
@@ -54,6 +141,10 @@
             $qr .= ' and origem = ' .$origem;
             $mysql = $mysqli->query($qr);
 
+            if (!$mysql) {
+                responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+            }
+
             if ($mysql->num_rows > 0) {
                 $row = mysqli_fetch_assoc($mysql);            
                 $idt = $row['idt'] + 1;
@@ -63,6 +154,10 @@
                 $qr .= ' where tabela = "' . $tabela . '"';
                 $qr .= ' and origem = ' .$origem;
                 $mysql = $mysqli->query($qr);        
+
+                if (!$mysql) {
+                    responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+                }
             } else {
                 $idt = 1;
 
@@ -71,6 +166,10 @@
                 $qr .= ' ,tabela = "' . $tabela . '"';
                 $qr .= ' ,origem = ' .$origem;
                 $mysql = $mysqli->query($qr);        
+
+                if (!$mysql) {
+                    responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+                }
             }
 
             return $idt . $origem; 
@@ -89,6 +188,10 @@
         $qr .= ' order by item desc';
         $qr .= ' limit 1';
         $mysql = $mysqli->query($qr);
+
+        if (!$mysql) {
+            responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+        }
 
         //error_log('funcoes-incluirItem');
         //error_log($qr);
@@ -128,6 +231,10 @@
         gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
         $mysql = $mysqli->query($qr);
 
+        if (!$mysql) {
+            responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+        }
+
         //error_log($qr);
 
         if ($item['observacaoItem'] !== '') {
@@ -140,6 +247,10 @@
             $qr .= ' ,data_inc="' . $dia . '"';        
             gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
             $mysql = $mysqli->query($qr);        
+
+            if (!$mysql) {
+                responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+            }
     
             //error_log($qr);        
         }
@@ -155,6 +266,10 @@
                 $qr .= ' ,tag=' . $codigoTag;
                 gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
                 $mysql = $mysqli->query($qr);    
+
+                if (!$mysql) {
+                    responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+                }
             }    
         }                    
         catch(Exception $e) {}        
@@ -168,6 +283,10 @@
         $qr .= ' and status=0';
         $qr .= ' limit 1';
         $mysql = $mysqli->query($qr);
+
+        if (!$mysql) {
+            responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+        }
 
         //error_log('funcoes - excluirComanda');
         //error_log($qr);
@@ -193,6 +312,10 @@
             gravarLog($mysqli, $qr, $origem, $data->nome_funcionario); 
             $mysql = $mysqli->query($qr);
 
+            if (!$mysql) {
+                responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+            }
+
             //error_log($qr);
 
             $qr  = 'update vendas_obs set';
@@ -207,6 +330,10 @@
 
             gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
             $mysql = $mysqli->query($qr);
+
+            if (!$mysql) {
+                responderErro('Erro executando query em _funcoes.php: ' . $mysqli->error);
+            }
 
             //error_log($qr);            
         }
@@ -230,10 +357,10 @@
     function utf8_string_array_encode(&$array){
         $func = function(&$value,&$key){
             if(is_string($value)){
-                $value = utf8_encode($value);
+                $value = textoUtf8($value);
             }
             if(is_string($key)){
-                $key = utf8_encode($key);
+                $key = textoUtf8($key);
             }
             if(is_array($value)){
                 utf8_string_array_encode($value);

@@ -1,11 +1,11 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import '../../core/config/app_config.dart';
 import '../../core/models/funcionario.dart';
 import '../../core/models/item_comanda.dart';
 import '../../core/models/produto.dart';
+import '../../core/network/api_client.dart';
+import '../commands/command_repository.dart';
 import '../commands/command_selection.dart';
 
 class ItemRepository {
@@ -16,28 +16,15 @@ class ItemRepository {
   final http.Client? _client;
 
   Future<List<ItemComanda>> fetchItems(int codigoComanda) async {
-    final client = _client ?? http.Client();
-
     try {
-      final response = await client
-          .post(
-            config.endpoint('lerItens'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: jsonEncode({'codigo_comanda': codigoComanda.toString()}),
-          )
-          .timeout(const Duration(seconds: 20));
+      final decoded = await ApiClient(config: config, client: _client).postJson(
+        scriptName: 'lerItens',
+        body: {'codigo_comanda': codigoComanda.toString()},
+        failureMessage: 'Nao foi possivel carregar itens',
+        invalidMessage: 'Resposta invalida ao carregar itens.',
+        allowEmptyResponse: false,
+      );
 
-      if (response.statusCode != 200) {
-        throw ItemRepositoryException(
-          'Erro carregando itens (${response.statusCode}).',
-        );
-      }
-
-      final decoded = jsonDecode(response.body);
       if (decoded is! List) {
         throw const ItemRepositoryException(
           'Resposta invalida ao carregar itens.',
@@ -53,16 +40,10 @@ class ItemRepository {
           .toList();
     } on ItemRepositoryException {
       rethrow;
-    } on FormatException catch (error) {
-      throw ItemRepositoryException(
-        'Resposta invalida ao carregar itens: ${error.message}',
-      );
+    } on ApiClientException catch (error) {
+      throw ItemRepositoryException(error.message);
     } catch (error) {
       throw ItemRepositoryException('Nao foi possivel carregar itens: $error');
-    } finally {
-      if (_client == null) {
-        client.close();
-      }
     }
   }
 
@@ -73,50 +54,39 @@ class ItemRepository {
     required double quantity,
     String observation = '',
   }) async {
-    final client = _client ?? http.Client();
     final total = quantity * product.valorUnitario;
 
     try {
-      final response = await client
-          .post(
-            config.endpoint('incluirItem'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: jsonEncode({
-              'codigo_comanda': command.codigoComanda.toString(),
-              'codigo_mesa': command.codigoMesa.toString(),
-              'codigo_tag': command.codigoTag.toString(),
-              'codigo_funcionario': employee.codigo.toString(),
-              'nome_funcionario': employee.nome,
-              'codigo_produto': product.codigo.toString(),
-              'codigo_barra': product.codigoBarra,
-              'codigo_reduzido': product.codigoReduzido.toString(),
-              'descricao_produto': product.descricao,
-              'qtde_produto': quantity.toStringAsFixed(3),
-              'valor_unitario': product.valorUnitario,
-              'valor_total': total,
-              'observacao_item': observation,
-            }),
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (response.statusCode != 200) {
-        throw ItemRepositoryException(
-          'Erro incluindo item (${response.statusCode}).',
-        );
-      }
+      await ApiClient(config: config, client: _client).postJson(
+        scriptName: 'incluirItem',
+        body: {
+          'codigo_comanda': command.codigoComanda.toString(),
+          'codigo_mesa': command.codigoMesa.toString(),
+          'codigo_tag': command.codigoTag > 0
+              ? command.codigoTag.toString()
+              : '',
+          'codigo_funcionario': employee.codigo.toString(),
+          'nome_funcionario': employee.nome,
+          'codigo_produto': product.codigo.toString(),
+          'codigo_barra': product.codigoBarra,
+          'codigo_reduzido': product.codigoReduzido.toString(),
+          'descricao_produto': product.descricao,
+          'qtde_produto': quantity.toStringAsFixed(3),
+          'valor_unitario': product.valorUnitario,
+          'valor_total': total,
+          'observacao_item': observation,
+        },
+        failureMessage: 'Nao foi possivel incluir item',
+        invalidMessage: 'Resposta invalida ao incluir item.',
+      );
     } catch (error) {
       if (error is ItemRepositoryException) {
         rethrow;
       }
-      throw ItemRepositoryException('Nao foi possivel incluir item: $error');
-    } finally {
-      if (_client == null) {
-        client.close();
+      if (error is ApiClientException) {
+        throw ItemRepositoryException(error.message);
       }
+      throw ItemRepositoryException('Nao foi possivel incluir item: $error');
     }
   }
 
@@ -162,49 +132,42 @@ class ItemRepository {
     );
   }
 
+  Future<void> changeItemCommand({
+    required Funcionario employee,
+    required CommandSelection command,
+    required ItemComanda item,
+    required int novaComanda,
+  }) async {
+    final commandRepository = CommandRepository(
+      config: config,
+      client: _client,
+    );
+    await commandRepository.changeCommand(
+      employee: employee,
+      codigoComanda: command.codigoComanda,
+      novaComanda: novaComanda,
+      itemVenda: item.itemVenda,
+    );
+  }
+
   Future<Object?> _postJson({
     required String scriptName,
     required Map<String, Object> body,
     required String failureMessage,
   }) async {
-    final client = _client ?? http.Client();
-
     try {
-      final response = await client
-          .post(
-            config.endpoint(scriptName),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (response.statusCode != 200) {
-        throw ItemRepositoryException(
-          '$failureMessage (${response.statusCode}).',
-        );
-      }
-
-      if (response.body.trim().isEmpty) {
-        return null;
-      }
-
-      return jsonDecode(response.body);
+      return await ApiClient(config: config, client: _client).postJson(
+        scriptName: scriptName,
+        body: body,
+        failureMessage: failureMessage,
+        invalidMessage: 'Resposta invalida do servidor.',
+      );
     } on ItemRepositoryException {
       rethrow;
-    } on FormatException catch (error) {
-      throw ItemRepositoryException(
-        'Resposta invalida do servidor: ${error.message}',
-      );
+    } on ApiClientException catch (error) {
+      throw ItemRepositoryException(error.message);
     } catch (error) {
       throw ItemRepositoryException('$failureMessage: $error');
-    } finally {
-      if (_client == null) {
-        client.close();
-      }
     }
   }
 }

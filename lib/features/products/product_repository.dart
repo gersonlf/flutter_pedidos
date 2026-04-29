@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import '../../core/config/app_config.dart';
 import '../../core/models/produto.dart';
+import '../../core/network/api_client.dart';
 
 class ProductRepository {
   const ProductRepository({required this.config, http.Client? client})
@@ -49,28 +48,15 @@ class ProductRepository {
     required String serverErrorPrefix,
     required String failurePrefix,
   }) async {
-    final client = _client ?? http.Client();
-
     try {
-      final response = await client
-          .post(
-            config.endpoint(scriptName),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 20));
+      final decoded = await ApiClient(config: config, client: _client).postJson(
+        scriptName: scriptName,
+        body: body,
+        failureMessage: serverErrorPrefix,
+        invalidMessage: emptyMessage,
+        allowEmptyResponse: false,
+      );
 
-      if (response.statusCode != 200) {
-        throw ProductRepositoryException(
-          '$serverErrorPrefix (${response.statusCode}).',
-        );
-      }
-
-      final decoded = jsonDecode(response.body);
       if (decoded is! List) {
         throw ProductRepositoryException(emptyMessage);
       }
@@ -84,16 +70,10 @@ class ProductRepository {
           .toList();
     } on ProductRepositoryException {
       rethrow;
-    } on FormatException catch (error) {
-      throw ProductRepositoryException(
-        'Resposta invalida ao carregar produtos: ${error.message}',
-      );
+    } on ApiClientException catch (error) {
+      throw ProductRepositoryException(error.message);
     } catch (error) {
       throw ProductRepositoryException('$failurePrefix: $error');
-    } finally {
-      if (_client == null) {
-        client.close();
-      }
     }
   }
 }

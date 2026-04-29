@@ -4,11 +4,9 @@
     include '_funcoes.php';
     
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         $qr  = 'select if(d.bloqueia_vendas_em_horas="S",date_add(concat(min(a.data)," ",min(a.hora)),interval 28800 second)<now(),0) bloqueio';
         $qr .= ' from vendas a';
@@ -22,6 +20,10 @@
         $qr .= ' order by concat(a.data," ",a.hora)';
         $qr .= ' limit 1';
         $mysql = $mysqli->query($qr);        
+
+        if (!$mysql) {
+            responderErro('Erro executando query em lerBloqueio.php: ' . $mysqli->error);
+        }
   
         if ($mysql->num_rows == 0) {
             $qr  = 'select comanda';
@@ -31,6 +33,10 @@
             $qr .= ' and isnull(data_exc)';
             $qr .= ' limit 1';
             $mysql = $mysqli->query($qr);                  
+
+            if (!$mysql) {
+                responderErro('Erro executando query em lerBloqueio.php: ' . $mysqli->error);
+            }
 
             if ($mysql->num_rows > 0) {
                 $bloqueio = '9999999';
@@ -46,6 +52,5 @@
         $retorno['bloqueio'] = $bloqueio;
 
         //$retorno = utf8_string_array_encode($retorno);        
-        echo json_encode($retorno);         
-    }
-?>             
+        responderJson($retorno);         
+?>        

@@ -4,11 +4,9 @@
     include '_funcoes.php';
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         $qr  = 'select';
         $qr .= ' a.idt codigo_produto,';
@@ -41,6 +39,10 @@
         $qr .= ' order by a.descricao';
         $mysql = $mysqli->query($qr);
 
+        if (!$mysql) {
+            responderErro('Erro executando query em lerProdutos.php: ' . $mysqli->error);
+        }
+
         $retorno = array();
         $conta = 0;
 
@@ -50,16 +52,15 @@
             $retorno[$conta] = (object)null;            
             $retorno[$conta]->codigo_produto = $row['codigo_produto'];
             $retorno[$conta]->codigo_reduzido = $row['codigo_reduzido'];
-            $retorno[$conta]->codigo_barra = utf8_encode($row['codigo_barra']);
-            $retorno[$conta]->descricao_produto = utf8_encode($row['descricao_produto']);
+            $retorno[$conta]->codigo_barra = textoUtf8($row['codigo_barra']);
+            $retorno[$conta]->descricao_produto = textoUtf8($row['descricao_produto']);
             $retorno[$conta]->grupo_produto = $row['grupo_produto'];
             $retorno[$conta]->valor_unitario = $row['valor_unitario'];
-            $retorno[$conta]->unidade_produto = utf8_encode($row['unidade_produto']);
+            $retorno[$conta]->unidade_produto = textoUtf8($row['unidade_produto']);
 
             $conta++;            
         }
 
         //$retorno = utf8_string_array_encode($retorno);        
-        echo json_encode($retorno);
-    }
+        responderJson($retorno);
 ?>        

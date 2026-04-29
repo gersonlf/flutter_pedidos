@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/models/empresa_config.dart';
 import '../../core/models/funcionario.dart';
 import '../../core/models/item_comanda.dart';
 import '../../core/models/produto.dart';
@@ -18,12 +19,14 @@ class ItemListPage extends StatefulWidget {
     required this.config,
     required this.employee,
     required this.command,
+    this.companyConfig,
     ItemRepository? repository,
   }) : _repository = repository;
 
   final AppConfig config;
   final Funcionario employee;
   final CommandSelection command;
+  final EmpresaConfig? companyConfig;
   final ItemRepository? _repository;
 
   @override
@@ -324,8 +327,140 @@ class _ItemListPageState extends State<ItemListPage> {
     }
   }
 
+  Future<void> _changeItemCommand(ItemComanda item) async {
+    if (widget.command.estaBloqueada || _busy) {
+      return;
+    }
+
+    final authorizedEmployee = await _authorizeTrade();
+    if (authorizedEmployee == null || !mounted) {
+      return;
+    }
+
+    final novaComanda = await showDialog<int>(
+      context: context,
+      builder: (_) => _NumberDialog(
+        title: 'Trocar item de comanda',
+        label: 'Nova comanda',
+        icon: Icons.receipt_long_outlined,
+        invalidMessage: 'Informe uma comanda valida',
+      ),
+    );
+
+    if (novaComanda == null || !mounted) {
+      return;
+    }
+
+    if (novaComanda == widget.command.codigoComanda) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A nova comanda deve ser diferente da atual.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+    });
+
+    try {
+      await _repository.changeItemCommand(
+        employee: authorizedEmployee,
+        command: widget.command,
+        item: item,
+        novaComanda: novaComanda,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${item.descricaoProduto} transferido')),
+      );
+      _reload();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  Future<Funcionario?> _authorizeTrade() async {
+    final policy = widget.companyConfig?.controlaTroca;
+    switch (policy) {
+      case TrocaComandaPolicy.desabilitada:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Operacao desabilitada. Nao e possivel fazer a troca.',
+            ),
+          ),
+        );
+        return null;
+      case TrocaComandaPolicy.exigeSenha:
+        final password = await showDialog<String>(
+          context: context,
+          builder: (_) => const _PasswordDialog(),
+        );
+
+        if (password == null || password.isEmpty || !mounted) {
+          return null;
+        }
+
+        setState(() {
+          _busy = true;
+        });
+
+        try {
+          final employeeRepository = EmployeeRepository(config: widget.config);
+          final authorization = await employeeRepository.validateDeletePassword(
+            password,
+          );
+
+          if (!mounted) {
+            return null;
+          }
+
+          if (authorization == null) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Senha invalida')));
+            return null;
+          }
+
+          return authorization;
+        } catch (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(error.toString())));
+          }
+          return null;
+        } finally {
+          if (mounted) {
+            setState(() {
+              _busy = false;
+            });
+          }
+        }
+      case TrocaComandaPolicy.livre:
+      case null:
+        return widget.employee;
+    }
+  }
+
   Future<void> _sendToKitchen() async {
-    if (_busy) {
+    if (_busy || widget.companyConfig?.controlaCozinha == false) {
       return;
     }
 
@@ -406,7 +541,9 @@ class _ItemListPageState extends State<ItemListPage> {
         actions: [
           IconButton(
             tooltip: 'Enviar para cozinha',
-            onPressed: _busy ? null : _sendToKitchen,
+            onPressed: _busy || widget.companyConfig?.controlaCozinha == false
+                ? null
+                : _sendToKitchen,
             icon: const Icon(Icons.restaurant_outlined),
           ),
           IconButton(
@@ -470,6 +607,7 @@ class _ItemListPageState extends State<ItemListPage> {
                       child: _ItemTile(
                         item: item,
                         enabled: !widget.command.estaBloqueada && !_busy,
+                        onChangeCommand: () => _changeItemCommand(item),
                         onChangeObservation: () => _changeObservation(item),
                         onDelete: () => _deleteItem(item),
                       ),
@@ -489,6 +627,72 @@ class _PasswordDialog extends StatefulWidget {
 
   @override
   State<_PasswordDialog> createState() => _PasswordDialogState();
+}
+
+class _NumberDialog extends StatefulWidget {
+  const _NumberDialog({
+    required this.title,
+    required this.label,
+    required this.icon,
+    required this.invalidMessage,
+  });
+
+  final String title;
+  final String label;
+  final IconData icon;
+  final String invalidMessage;
+
+  @override
+  State<_NumberDialog> createState() => _NumberDialogState();
+}
+
+class _NumberDialogState extends State<_NumberDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null || value <= 0) {
+      setState(() {
+        _error = widget.invalidMessage;
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _confirm(),
+        decoration: InputDecoration(
+          labelText: widget.label,
+          prefixIcon: Icon(widget.icon),
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _confirm, child: const Text('Confirmar')),
+      ],
+    );
+  }
 }
 
 class _PasswordDialogState extends State<_PasswordDialog> {
@@ -796,12 +1000,14 @@ class _ItemTile extends StatelessWidget {
   const _ItemTile({
     required this.item,
     required this.enabled,
+    required this.onChangeCommand,
     required this.onChangeObservation,
     required this.onDelete,
   });
 
   final ItemComanda item;
   final bool enabled;
+  final VoidCallback onChangeCommand;
   final VoidCallback onChangeObservation;
   final VoidCallback onDelete;
 
@@ -837,6 +1043,8 @@ class _ItemTile extends StatelessWidget {
               enabled: enabled,
               onSelected: (action) {
                 switch (action) {
+                  case _ItemAction.changeCommand:
+                    onChangeCommand();
                   case _ItemAction.observation:
                     onChangeObservation();
                   case _ItemAction.delete:
@@ -844,6 +1052,13 @@ class _ItemTile extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _ItemAction.changeCommand,
+                  child: ListTile(
+                    leading: Icon(Icons.swap_horiz_outlined),
+                    title: Text('Trocar comanda'),
+                  ),
+                ),
                 PopupMenuItem(
                   value: _ItemAction.observation,
                   child: ListTile(
@@ -867,7 +1082,7 @@ class _ItemTile extends StatelessWidget {
   }
 }
 
-enum _ItemAction { observation, delete }
+enum _ItemAction { changeCommand, observation, delete }
 
 class _ItemError extends StatelessWidget {
   const _ItemError({required this.message, required this.onRetry});

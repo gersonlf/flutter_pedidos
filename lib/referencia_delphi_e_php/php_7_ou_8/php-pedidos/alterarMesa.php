@@ -5,20 +5,25 @@
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
     
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
 
-        $qr  = 'update vendas set';
-        $qr .= ' mesa=' . $data->codigo_nova_mesa;
-        $qr .= ' where cartao=' . $data->codigo_comanda;
-        $qr .= ' and origem=' . $origem;
-        $qr .= ' and status=0';                
-        gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
-        $mysql = $mysqli->query($qr);
+    $data = lerJsonEntrada();
 
-        //error_log('alterarMesa');
-        //error_log($qr);
+    $qr  = 'update vendas set';
+    $qr .= ' mesa=' . $data->codigo_nova_mesa;
+    $qr .= ' where cartao=' . $data->codigo_comanda;
+    $qr .= ' and origem=' . $origem;
+    $qr .= ' and status=0';                
+    gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
+    $mysql = $mysqli->query($qr);
+
+    if (!$mysql) {
+        responderErro('Erro executando query em alterarMesa.php: ' . $mysqli->error);
     }
+
+    if (!$mysql) {
+        responderErro('Erro alterando mesa: ' . $mysqli->error);
+    }
+
+    responderSucesso('Mesa alterada', array('linhas_afetadas' => $mysqli->affected_rows));
 ?>        

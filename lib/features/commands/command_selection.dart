@@ -17,6 +17,22 @@ class CommandSelection {
 
   bool get estaBloqueada => bloqueio != 0;
 
+  CommandSelection copyWith({
+    int? codigoComanda,
+    int? codigoMesa,
+    int? codigoTag,
+    int? bloqueio,
+    Comanda? comanda,
+  }) {
+    return CommandSelection(
+      codigoComanda: codigoComanda ?? this.codigoComanda,
+      codigoMesa: codigoMesa ?? this.codigoMesa,
+      codigoTag: codigoTag ?? this.codigoTag,
+      bloqueio: bloqueio ?? this.bloqueio,
+      comanda: comanda ?? this.comanda,
+    );
+  }
+
   String get resumo {
     final parts = ['CMD $codigoComanda'];
     if (codigoMesa > 0) {

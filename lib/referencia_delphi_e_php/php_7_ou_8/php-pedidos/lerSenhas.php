@@ -4,11 +4,9 @@
     include '_funcoes.php';
     
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         $qr  = 'select';
         $qr .= ' idt codigo,';
@@ -23,6 +21,10 @@
         $qr .= ' limit 1';                
         $mysql = $mysqli->query($qr);
 
+        if (!$mysql) {
+            responderErro('Erro executando query em lerSenhas.php: ' . $mysqli->error);
+        }
+
         $retorno = array();
         $conta = 0;
 
@@ -31,12 +33,11 @@
 
             $retorno[$conta] = (object)null;             
             $retorno[$conta]->codigo = $row['codigo'];
-            $retorno[$conta]->nome = utf8_encode($row['nome']);
+            $retorno[$conta]->nome = textoUtf8($row['nome']);
              
             $conta++;              
         }
 
         //$retorno = utf8_string_array_encode($retorno);         
-        echo json_encode($retorno);    
-    }
-?>    
+        responderJson($retorno);    
+?>        

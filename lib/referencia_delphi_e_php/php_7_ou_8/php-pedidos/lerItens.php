@@ -4,11 +4,9 @@
     include '_funcoes.php';
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         criarTabelaVendasTag($mysqli, $origem);
 
@@ -50,6 +48,10 @@
         $qr .= ' order by a.data desc, a.hora desc';        
         $mysql = $mysqli->query($qr);
 
+        if (!$mysql) {
+            responderErro('Erro executando query em lerItens.php: ' . $mysqli->error);
+        }
+
         //error_log('lerItens');        
         //error_log($qr);
 
@@ -67,22 +69,21 @@
             $retorno[$conta]->codigo_tag = $row['codigo_tag'];            
             $retorno[$conta]->data_hora = $row['data_hora'];
             $retorno[$conta]->codigo_funcionario = $row['codigo_funcionario'];
-            $retorno[$conta]->nome_funcionario = utf8_encode($row['nome_funcionario']);
+            $retorno[$conta]->nome_funcionario = textoUtf8($row['nome_funcionario']);
             $retorno[$conta]->item_venda = $row['item_venda'];
             $retorno[$conta]->codigo_produto = $row['codigo_produto'];
-            $retorno[$conta]->codigo_barra = utf8_encode($row['codigo_barra']);
+            $retorno[$conta]->codigo_barra = textoUtf8($row['codigo_barra']);
             $retorno[$conta]->codigo_reduzido = $row['codigo_reduzido'];
-            $retorno[$conta]->descricao_produto = utf8_encode($row['descricao_produto']);
+            $retorno[$conta]->descricao_produto = textoUtf8($row['descricao_produto']);
             $retorno[$conta]->qtde_produto = $row['qtde_produto'];
             $retorno[$conta]->valor_unitario = $row['valor_unitario'];
             $retorno[$conta]->valor_desconto = $row['valor_desconto'];
             $retorno[$conta]->valor_total = $row['valor_total'];
-            $retorno[$conta]->observacao_item = utf8_encode($row['observacao_item']);
+            $retorno[$conta]->observacao_item = textoUtf8($row['observacao_item']);
 
             $conta++;
         }
 
         //$retorno = utf8_string_array_encode($retorno);        
-        echo json_encode($retorno);         
-    }
+        responderJson($retorno);         
 ?>        

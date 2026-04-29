@@ -35,7 +35,7 @@ Tambem foram criadas estruturas centrais:
 
 - configuracao local do app;
 - montagem de URL dos scripts PHP;
-- cliente/rede base;
+- cliente/rede centralizado;
 - modelos Dart para as entidades do dominio.
 
 Dependencias adicionadas ao projeto:
@@ -103,8 +103,12 @@ Foi implementado o modulo de comandas:
 - selecao de comanda para lancar itens;
 - troca de mesa via `alterarMesa.php`;
 - exclusao de comanda via `excluirComanda.php`;
+- troca de comanda inteira via `alterarComanda.php`;
 - confirmacao de exclusao;
 - validacao de senha quando a configuracao exigir.
+- aplicacao de `controla_troca` para troca livre, com senha ou desabilitada.
+- tratamento de resposta vazia em `alterarComanda.php` como sucesso.
+- digito verificador opcional na leitura/consulta de comanda, removendo o ultimo digito quando a configuracao estiver ativa.
 
 Tambem foi ajustada a Home para limpar a comanda selecionada quando uma comanda e excluida.
 
@@ -145,7 +149,11 @@ Foi implementado o fluxo de itens:
 - inclusao de acompanhamentos e adicionais como itens separados;
 - alteracao de observacao via `alterarObservacao.php`;
 - exclusao de item via `excluirComanda.php`;
+- troca de item para outra comanda via `alterarComanda.php`;
 - validacao de senha para exclusao quando configurado;
+- aplicacao de `controla_troca` para troca livre, com senha ou desabilitada;
+- recarga da lista de itens apos troca de item;
+- envio de `codigo_tag` vazio quando nao ha tag real, evitando persistir tag `0`;
 - botao para enviar a comanda para cozinha via `imprimirComanda.php`.
 
 Arquivos envolvidos:
@@ -179,6 +187,102 @@ Arquivos envolvidos:
 - `lib/features/home/home_page.dart`
 - `lib/features/items/item_list_page.dart`
 
+## Regras da empresa
+
+Foi iniciada a leitura e aplicacao das regras da empresa via `lerEmpresas.php`:
+
+- modelo `EmpresaConfig` com parse de `controla_mesa`, `controla_tag`, `controla_troca` e `controla_cozinha`;
+- repositorio `CompanyRepository` para carregar as regras no inicio do app;
+- exibicao das regras carregadas na Home;
+- aviso na Home quando as regras nao puderem ser carregadas;
+- habilitacao do modulo Cozinha somente quando `controla_cozinha=S`;
+- bloqueio do envio para cozinha na tela de itens quando a cozinha estiver desabilitada;
+- exigencia de mesa antes de abrir itens quando `controla_mesa=S`;
+- exigencia de tag antes de abrir itens quando `controla_tag=S`.
+
+Arquivos envolvidos:
+
+- `lib/core/models/empresa_config.dart`
+- `lib/features/company/company_repository.dart`
+- `lib/features/home/home_page.dart`
+- `lib/features/items/item_list_page.dart`
+- `lib/features/commands/command_selection.dart`
+
+## Camada de rede
+
+Foi centralizado o acesso HTTP/JSON em `ApiClient`, reduzindo duplicacao nos repositorios.
+
+Comportamentos tratados no cliente central:
+
+- montagem do endpoint PHP;
+- headers padrao para JSON;
+- `POST` com corpo JSON;
+- timeout de 20 segundos;
+- decodificacao por `bodyBytes` em UTF-8;
+- resposta vazia como sucesso quando permitido;
+- extracao de JSON valido quando o PHP imprime avisos antes/depois do corpo;
+- mensagem de erro com trecho da resposta quando o corpo nao e JSON valido.
+
+Repositorios migrados para usar o cliente central:
+
+- `CompanyRepository`
+- `CommandRepository`
+- `EmployeeRepository`
+- `ItemRepository`
+- `KitchenRepository`
+- `ProductRepository`
+
+Arquivos envolvidos:
+
+- `lib/core/network/api_client.dart`
+- `test/api_client_test.dart`
+
+## Padronizacao dos scripts PHP
+
+Foi aplicada a padronizacao dos scripts PHP para evitar sucesso com corpo vazio e respostas de erro em HTML/warning.
+
+Foram adicionados helpers em `_funcoes.php`:
+
+- `responderJson`;
+- `responderSucesso`;
+- `responderErro`;
+- `validarConexao`;
+- `lerJsonEntrada`.
+
+Scripts de acao padronizados para retornar JSON:
+
+- `alterarComanda.php`;
+- `alterarMesa.php`;
+- `alterarObservacao.php`;
+- `excluirComanda.php`;
+- `imprimirComanda.php`;
+- `incluirItem.php`;
+- `lerPedidoPronto.php`;
+- `lerPedidoEntregue.php`.
+
+Scripts de leitura padronizados mantendo o formato de sucesso original esperado pelo Flutter:
+
+- `lerAcompanhamentos.php`;
+- `lerAdicionais.php`;
+- `lerBloqueio.php`;
+- `lerComandas.php`;
+- `lerEmpresas.php`;
+- `lerFuncionarios.php`;
+- `lerItens.php`;
+- `lerMesa.php`;
+- `lerPedidos.php`;
+- `lerProdutos.php`;
+- `lerSenhas.php`;
+- `lerTag.php`.
+
+Formato de sucesso usado nos scripts de acao quando nao ha lista/mapa legado para retornar:
+
+- `sucesso`;
+- `mensagem`;
+- campos adicionais quando util, como `linhas_afetadas`, `itens_alterados` ou `itens_enviados`.
+
+Tambem foi adicionada resposta JSON de erro para falha de conexao, JSON invalido e falhas de query nos scripts ajustados. Chamadas antigas a `utf8_encode` foram trocadas por `textoUtf8`, evitando avisos em PHP mais novo.
+
 ## Modelos criados
 
 Modelos Dart usados ate agora:
@@ -189,11 +293,13 @@ Modelos Dart usados ate agora:
 - `lib/core/models/item_comanda.dart`
 - `lib/core/models/produto.dart`
 - `lib/core/models/pedido_cozinha.dart`
+- `lib/core/models/empresa_config.dart`
 
 ## Repositorios criados
 
 Repositorios de acesso aos scripts PHP:
 
+- `lib/features/company/company_repository.dart`
 - `lib/features/employees/employee_repository.dart`
 - `lib/features/commands/command_repository.dart`
 - `lib/features/products/product_repository.dart`
@@ -221,9 +327,15 @@ Arquivos de suporte envolvidos:
 - `pubspec.yaml`
 - `pubspec.lock`
 - `test/widget_test.dart`
+- `test/api_client_test.dart`
+- `test/command_check_digit_test.dart`
+- `test/command_repository_test.dart`
+- `test/company_repository_test.dart`
+- `test/item_repository_test.dart`
+- `test/product_repository_test.dart`
 - `lib/core/network/api_client.dart`
 
-O teste de widget atual valida que a Home carrega e mostra a entrada de configuracao.
+O teste de widget atual valida que a Home carrega e mostra a entrada de configuracao. Tambem foram adicionados testes para o repositorio de produtos e para o carregamento das regras da empresa.
 
 ## Arquivos de referencia consultados
 
@@ -251,6 +363,7 @@ Principais arquivos Delphi/PHP consultados para orientar a recriacao:
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerTag.php`
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerBloqueio.php`
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/alterarMesa.php`
+- `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/alterarComanda.php`
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/excluirComanda.php`
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerProdutos.php`
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerAcompanhamentos.php`
@@ -262,6 +375,7 @@ Principais arquivos Delphi/PHP consultados para orientar a recriacao:
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerPedidos.php`
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerPedidoPronto.php`
 - `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerPedidoEntregue.php`
+- `lib/referencia_delphi_e_php/php_7_ou_8/php-pedidos/lerEmpresas.php`
 
 ## Validacoes executadas
 
@@ -275,9 +389,9 @@ O ultimo estado validado passou em:
 
 - formatacao sem pendencias;
 - analise sem issues;
-- teste de widget passando.
+- testes passando.
 
-Observacao: a pasta atual nao esta inicializada como repositorio Git, entao nao foi possivel usar `git status`/`git diff` para listar alteracoes formalmente.
+Observacao: a pasta atual ja esta inicializada como repositorio Git, com remoto `origin` apontando para `https://github.com/gersonlf/flutter_pedidos.git`.
 
 ## Estado atual do app
 
@@ -299,18 +413,18 @@ Hoje o app ja permite o fluxo basico:
 14. listar pedidos prontos/entregues;
 15. chamar comanda;
 16. remover chamada/entrega.
+17. carregar regras da empresa;
+18. exigir mesa/tag conforme configuracao da empresa;
+19. habilitar/desabilitar cozinha conforme configuracao da empresa.
+20. trocar comanda inteira conforme regra `controla_troca`;
+21. trocar item para outra comanda conforme regra `controla_troca`.
+22. aplicar digito verificador opcional somente na leitura/consulta de comanda.
 
 ## Pontos ainda pendentes ou incompletos
 
 Alguns comportamentos do Delphi ainda nao foram recriados:
 
-- troca de comanda inteira;
-- troca de item para outra comanda;
-- regra completa de `controla_troca` da empresa;
-- leitura e aplicacao completa de `lerEmpresas.php`;
-- exigencia automatica de mesa quando `controla_mesa=S`;
-- exigencia automatica de tag quando `controla_tag=S`;
-- digito verificador de comanda;
+- persistencia/troca de tag fora do fluxo de inclusao de item;
 - senha local para acessar configuracao;
 - refresh automatico periodico da Home;
 - tratamento centralizado de erros HTTP/PHP;
@@ -321,23 +435,11 @@ Alguns comportamentos do Delphi ainda nao foram recriados:
 
 ## Sugestoes de proximos passos
 
-1. Implementar regras da empresa
+1. Fechar persistencia de tag
 
-   Criar um repositorio para `lerEmpresas.php`, carregar `controla_mesa`, `controla_tag`, `controla_troca` e `controla_cozinha`, e usar essas regras para habilitar/desabilitar fluxos.
+   Hoje a tag exigida entra no payload de inclusao do item. Ainda falta um fluxo explicito para alterar ou informar tag fora da inclusao, caso o uso real exija isso.
 
-2. Fechar fluxo de mesa e tag
-
-   Quando a comanda retornar `mesa=-1` ou `tag=-1`, solicitar mesa/tag antes de lancar itens, respeitando a configuracao da empresa.
-
-3. Implementar troca de comanda
-
-   Adicionar troca de comanda inteira e troca de item para outra comanda usando `alterarComanda.php`, incluindo senha quando `controla_troca=S` e bloqueio quando `controla_troca=D`.
-
-4. Melhorar camada de rede
-
-   Centralizar cabecalhos, timeout, parse de JSON, resposta vazia e mensagens de erro em um cliente unico para reduzir duplicacao entre repositorios.
-
-5. Expandir testes
+2. Expandir testes
 
    Criar testes para:
 
@@ -348,7 +450,7 @@ Alguns comportamentos do Delphi ainda nao foram recriados:
    - inclusao/exclusao de item;
    - tela de cozinha.
 
-6. Ajustar UX operacional
+3. Ajustar UX operacional
 
    Melhorar o fluxo para uso rapido por garcom:
 
@@ -357,11 +459,11 @@ Alguns comportamentos do Delphi ainda nao foram recriados:
    - reduzir toques para incluir varios itens na mesma comanda;
    - destacar status de bloqueio, mesa, tag e envio para cozinha.
 
-7. Testar contra servidor real
+4. Testar contra servidor real
 
    Rodar o app conectado ao PHP real para validar payloads e retornos, principalmente nos scripts que retornam corpo vazio ou mensagens inconsistentes.
 
-8. Preparar primeira versao demonstravel
+5. Preparar primeira versao demonstravel
 
    Depois dos pontos acima, organizar uma versao piloto com:
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/models/empresa_config.dart';
 import '../../core/models/comanda.dart';
 import '../../core/models/funcionario.dart';
+import '../../core/utils/command_check_digit.dart';
 import '../employees/employee_repository.dart';
 import 'command_repository.dart';
 import 'command_selection.dart';
@@ -12,11 +14,13 @@ class CommandSelectionPage extends StatefulWidget {
     super.key,
     required this.config,
     required this.employee,
+    required this.companyConfig,
     CommandRepository? repository,
   }) : _repository = repository;
 
   final AppConfig config;
   final Funcionario employee;
+  final EmpresaConfig companyConfig;
   final CommandRepository? _repository;
 
   @override
@@ -52,7 +56,10 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
   }
 
   Future<void> _consultTypedCommand() async {
-    final codigo = int.tryParse(_commandController.text.trim());
+    final codigo = parseCommandCode(
+      _commandController.text,
+      checkDigitEnabled: widget.config.commandCheckDigitEnabled,
+    );
     if (codigo == null || codigo <= 0) {
       _showMessage('Informe uma comanda valida.');
       return;
@@ -137,6 +144,118 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
           _busy = false;
         });
       }
+    }
+  }
+
+  Future<void> _changeCommand(Comanda command) async {
+    if (command.estaBloqueada || _busy) {
+      _showMessage('Comanda bloqueada. Operacao nao pode ser realizada.');
+      return;
+    }
+
+    final authorizedEmployee = await _authorizeTrade();
+    if (authorizedEmployee == null || !mounted) {
+      return;
+    }
+
+    final novaComanda = await showDialog<int>(
+      context: context,
+      builder: (_) => _NumberDialog(
+        title: 'Trocar comanda',
+        label: 'Nova comanda',
+        icon: Icons.receipt_long_outlined,
+        invalidMessage: 'Informe uma comanda valida',
+      ),
+    );
+
+    if (novaComanda == null || !mounted) {
+      return;
+    }
+
+    if (novaComanda == command.codigoComanda) {
+      _showMessage('A nova comanda deve ser diferente da atual.');
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+    });
+
+    try {
+      await _repository.changeCommand(
+        employee: authorizedEmployee,
+        codigoComanda: command.codigoComanda,
+        novaComanda: novaComanda,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage('Comanda alterada');
+      _reload();
+    } catch (error) {
+      if (mounted) {
+        _showMessage(error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  Future<Funcionario?> _authorizeTrade() async {
+    switch (widget.companyConfig.controlaTroca) {
+      case TrocaComandaPolicy.desabilitada:
+        _showMessage('Operacao desabilitada. Nao e possivel fazer a troca.');
+        return null;
+      case TrocaComandaPolicy.livre:
+        return widget.employee;
+      case TrocaComandaPolicy.exigeSenha:
+        final password = await showDialog<String>(
+          context: context,
+          builder: (_) => const _PasswordDialog(),
+        );
+
+        if (password == null || password.isEmpty || !mounted) {
+          return null;
+        }
+
+        setState(() {
+          _busy = true;
+        });
+
+        try {
+          final employeeRepository = EmployeeRepository(config: widget.config);
+          final authorization = await employeeRepository.validateDeletePassword(
+            password,
+          );
+
+          if (!mounted) {
+            return null;
+          }
+
+          if (authorization == null) {
+            _showMessage('Senha invalida');
+            return null;
+          }
+
+          return authorization;
+        } catch (error) {
+          if (mounted) {
+            _showMessage(error.toString());
+          }
+          return null;
+        } finally {
+          if (mounted) {
+            setState(() {
+              _busy = false;
+            });
+          }
+        }
     }
   }
 
@@ -325,6 +444,7 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
                           onTap: _consulting || _busy
                               ? null
                               : () => _selectCommand(command),
+                          onChangeCommand: () => _changeCommand(command),
                           onChangeMesa: () => _changeMesa(command),
                           onDelete: () => _deleteCommand(command),
                         ),
@@ -348,6 +468,72 @@ class _MesaDialog extends StatefulWidget {
 
   @override
   State<_MesaDialog> createState() => _MesaDialogState();
+}
+
+class _NumberDialog extends StatefulWidget {
+  const _NumberDialog({
+    required this.title,
+    required this.label,
+    required this.icon,
+    required this.invalidMessage,
+  });
+
+  final String title;
+  final String label;
+  final IconData icon;
+  final String invalidMessage;
+
+  @override
+  State<_NumberDialog> createState() => _NumberDialogState();
+}
+
+class _NumberDialogState extends State<_NumberDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null || value <= 0) {
+      setState(() {
+        _error = widget.invalidMessage;
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _confirm(),
+        decoration: InputDecoration(
+          labelText: widget.label,
+          prefixIcon: Icon(widget.icon),
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _confirm, child: const Text('Confirmar')),
+      ],
+    );
+  }
 }
 
 class _MesaDialogState extends State<_MesaDialog> {
@@ -526,6 +712,7 @@ class _CommandTile extends StatelessWidget {
     required this.command,
     required this.enabled,
     required this.onTap,
+    required this.onChangeCommand,
     required this.onChangeMesa,
     required this.onDelete,
   });
@@ -533,6 +720,7 @@ class _CommandTile extends StatelessWidget {
   final Comanda command;
   final bool enabled;
   final VoidCallback? onTap;
+  final VoidCallback onChangeCommand;
   final VoidCallback onChangeMesa;
   final VoidCallback onDelete;
 
@@ -561,6 +749,8 @@ class _CommandTile extends StatelessWidget {
               enabled: enabled && !command.estaBloqueada,
               onSelected: (action) {
                 switch (action) {
+                  case _CommandAction.changeCommand:
+                    onChangeCommand();
                   case _CommandAction.changeMesa:
                     onChangeMesa();
                   case _CommandAction.delete:
@@ -568,6 +758,13 @@ class _CommandTile extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _CommandAction.changeCommand,
+                  child: ListTile(
+                    leading: Icon(Icons.swap_horiz_outlined),
+                    title: Text('Trocar comanda'),
+                  ),
+                ),
                 PopupMenuItem(
                   value: _CommandAction.changeMesa,
                   child: ListTile(
@@ -603,7 +800,7 @@ class _CommandTile extends StatelessWidget {
   }
 }
 
-enum _CommandAction { changeMesa, delete }
+enum _CommandAction { changeCommand, changeMesa, delete }
 
 class _CommandError extends StatelessWidget {
   const _CommandError({required this.message, required this.onRetry});

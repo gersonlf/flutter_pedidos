@@ -1,10 +1,9 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import '../../core/config/app_config.dart';
 import '../../core/models/funcionario.dart';
 import '../../core/models/pedido_cozinha.dart';
+import '../../core/network/api_client.dart';
 
 class KitchenRepository {
   const KitchenRepository({required this.config, http.Client? client})
@@ -80,44 +79,19 @@ class KitchenRepository {
     required Map<String, String> body,
     required String failureMessage,
   }) async {
-    final client = _client ?? http.Client();
-
     try {
-      final response = await client
-          .post(
-            config.endpoint(scriptName),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (response.statusCode != 200) {
-        throw KitchenRepositoryException(
-          '$failureMessage (${response.statusCode}).',
-        );
-      }
-
-      if (response.body.trim().isEmpty) {
-        return null;
-      }
-
-      return jsonDecode(response.body);
+      return await ApiClient(config: config, client: _client).postJson(
+        scriptName: scriptName,
+        body: body,
+        failureMessage: failureMessage,
+        invalidMessage: 'Resposta invalida do servidor.',
+      );
     } on KitchenRepositoryException {
       rethrow;
-    } on FormatException catch (error) {
-      throw KitchenRepositoryException(
-        'Resposta invalida do servidor: ${error.message}',
-      );
+    } on ApiClientException catch (error) {
+      throw KitchenRepositoryException(error.message);
     } catch (error) {
       throw KitchenRepositoryException('$failureMessage: $error');
-    } finally {
-      if (_client == null) {
-        client.close();
-      }
     }
   }
 }

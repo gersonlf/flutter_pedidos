@@ -5,11 +5,11 @@
 
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
     
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
 
-        excluirComanda($mysqli, $origem, $data);
-    }
+    $data = lerJsonEntrada();
+
+    excluirComanda($mysqli, $origem, $data);
+
+    responderSucesso('Comanda excluida');
 ?>        

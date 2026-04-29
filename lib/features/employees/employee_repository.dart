@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import '../../core/config/app_config.dart';
 import '../../core/models/funcionario.dart';
+import '../../core/network/api_client.dart';
 
 class EmployeeRepository {
   const EmployeeRepository({required this.config, http.Client? client})
@@ -13,28 +12,15 @@ class EmployeeRepository {
   final http.Client? _client;
 
   Future<List<Funcionario>> fetchEmployees() async {
-    final client = _client ?? http.Client();
-
     try {
-      final response = await client
-          .post(
-            config.endpoint('lerFuncionarios'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: '{}',
-          )
-          .timeout(const Duration(seconds: 20));
+      final decoded = await ApiClient(config: config, client: _client).postJson(
+        scriptName: 'lerFuncionarios',
+        body: const <String, Object?>{},
+        failureMessage: 'Nao foi possivel carregar funcionarios',
+        invalidMessage: 'Resposta invalida ao carregar funcionarios.',
+        allowEmptyResponse: false,
+      );
 
-      if (response.statusCode != 200) {
-        throw EmployeeRepositoryException(
-          'Erro carregando funcionarios (${response.statusCode}).',
-        );
-      }
-
-      final decoded = jsonDecode(response.body);
       if (decoded is! List) {
         throw const EmployeeRepositoryException(
           'Resposta invalida ao carregar funcionarios.',
@@ -48,44 +34,25 @@ class EmployeeRepository {
           .toList();
     } on EmployeeRepositoryException {
       rethrow;
-    } on FormatException catch (error) {
-      throw EmployeeRepositoryException(
-        'Resposta invalida ao carregar funcionarios: ${error.message}',
-      );
+    } on ApiClientException catch (error) {
+      throw EmployeeRepositoryException(error.message);
     } catch (error) {
       throw EmployeeRepositoryException(
         'Nao foi possivel carregar funcionarios: $error',
       );
-    } finally {
-      if (_client == null) {
-        client.close();
-      }
     }
   }
 
   Future<Funcionario?> validateDeletePassword(String password) async {
-    final client = _client ?? http.Client();
-
     try {
-      final response = await client
-          .post(
-            config.endpoint('lerSenhas'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-              'Connection': 'Close',
-            },
-            body: jsonEncode({'senha': password}),
-          )
-          .timeout(const Duration(seconds: 20));
+      final decoded = await ApiClient(config: config, client: _client).postJson(
+        scriptName: 'lerSenhas',
+        body: {'senha': password},
+        failureMessage: 'Nao foi possivel validar senha',
+        invalidMessage: 'Resposta invalida ao validar senha.',
+        allowEmptyResponse: false,
+      );
 
-      if (response.statusCode != 200) {
-        throw EmployeeRepositoryException(
-          'Erro validando senha (${response.statusCode}).',
-        );
-      }
-
-      final decoded = jsonDecode(response.body);
       if (decoded is! List) {
         throw const EmployeeRepositoryException(
           'Resposta invalida ao validar senha.',
@@ -101,18 +68,12 @@ class EmployeeRepository {
       return authorizations.isEmpty ? null : authorizations.first;
     } on EmployeeRepositoryException {
       rethrow;
-    } on FormatException catch (error) {
-      throw EmployeeRepositoryException(
-        'Resposta invalida ao validar senha: ${error.message}',
-      );
+    } on ApiClientException catch (error) {
+      throw EmployeeRepositoryException(error.message);
     } catch (error) {
       throw EmployeeRepositoryException(
         'Nao foi possivel validar senha: $error',
       );
-    } finally {
-      if (_client == null) {
-        client.close();
-      }
     }
   }
 }

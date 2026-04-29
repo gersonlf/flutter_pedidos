@@ -4,11 +4,9 @@
     include '_funcoes.php';
     
     $mysqli = new mysqli($servidor, $usuario, $senha, $banco, $porta);
-    
-    if (mysqli_connect_errno()) { 
-        trigger_error(mysqli_connect_error());
-    } else { 
-        $data = json_decode(file_get_contents('php://input'));
+    validarConexao($mysqli);
+ 
+        $data = lerJsonEntrada();
 
         criarTabelaVendasTag($mysqli, $origem);
 
@@ -47,6 +45,10 @@
         $qr .= ' group by a.mesa,f.nome,a.item';
         $qr .= ' order by a.data desc,a.hora desc';
         $mysql = $mysqli->query($qr);        
+
+        if (!$mysql) {
+            responderErro('Erro executando query em alterarObservacao.php: ' . $mysqli->error);
+        }
   
         //error_log('alterarObservacao');
         //error_log($qr);
@@ -59,6 +61,10 @@
             $qr .= ' and status=0';
             $qr .= ' limit 1';
             $mysql = $mysqli->query($qr); 
+
+            if (!$mysql) {
+                responderErro('Erro executando query em alterarObservacao.php: ' . $mysqli->error);
+            }
 
             //error_log($qr);
 
@@ -73,6 +79,10 @@
                 $qr .= ' and origem=' . $origem;
                 $qr .= ' limit 1';
                 $mysql = $mysqli->query($qr); 
+
+                if (!$mysql) {
+                    responderErro('Erro executando query em alterarObservacao.php: ' . $mysqli->error);
+                }
 
                 //error_log($qr);
 
@@ -91,6 +101,10 @@
                     gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
                     $mysql = $mysqli->query($qr);            
 
+                    if (!$mysql) {
+                        responderErro('Erro executando query em alterarObservacao.php: ' . $mysqli->error);
+                    }
+
                     //error_log($qr);                    
                 } else {
                     $qr  = 'update vendas_obs set';
@@ -103,19 +117,22 @@
                     gravarLog($mysqli, $qr, $origem, $data->nome_funcionario);
                     $mysql = $mysqli->query($qr);
 
+                    if (!$mysql) {
+                        responderErro('Erro executando query em alterarObservacao.php: ' . $mysqli->error);
+                    }
+
                     //error_log($qr);                    
                 }            
             }
 
             $msg = '';
         } else {
-            $msg = 'Comanda já foi impressa na cozinha, não é possível fazer a alteração na observação agora!';
+            $msg = 'Comanda ja foi impressa na cozinha, nao e possivel alterar a observacao agora!';
         }
         
         $retorno = array();
         $retorno['msg'] = $msg;
 
         //$retorno = utf8_string_array_encode($retorno);                
-        echo json_encode($retorno);            
-    }
-?>
+        responderJson($retorno);            
+?>        

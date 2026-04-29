@@ -1,0 +1,645 @@
+import 'package:flutter/material.dart';
+
+import '../../core/config/app_config.dart';
+import '../../core/models/comanda.dart';
+import '../../core/models/funcionario.dart';
+import '../employees/employee_repository.dart';
+import 'command_repository.dart';
+import 'command_selection.dart';
+
+class CommandSelectionPage extends StatefulWidget {
+  const CommandSelectionPage({
+    super.key,
+    required this.config,
+    required this.employee,
+    CommandRepository? repository,
+  }) : _repository = repository;
+
+  final AppConfig config;
+  final Funcionario employee;
+  final CommandRepository? _repository;
+
+  @override
+  State<CommandSelectionPage> createState() => _CommandSelectionPageState();
+}
+
+class _CommandSelectionPageState extends State<CommandSelectionPage> {
+  final _commandController = TextEditingController();
+  late Future<List<Comanda>> _commandsFuture;
+  bool _consulting = false;
+  bool _busy = false;
+
+  CommandRepository get _repository {
+    return widget._repository ?? CommandRepository(config: widget.config);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _commandsFuture = _repository.fetchCommands();
+  }
+
+  @override
+  void dispose() {
+    _commandController.dispose();
+    super.dispose();
+  }
+
+  void _reload() {
+    setState(() {
+      _commandsFuture = _repository.fetchCommands();
+    });
+  }
+
+  Future<void> _consultTypedCommand() async {
+    final codigo = int.tryParse(_commandController.text.trim());
+    if (codigo == null || codigo <= 0) {
+      _showMessage('Informe uma comanda valida.');
+      return;
+    }
+
+    await _selectByCode(codigo);
+  }
+
+  Future<void> _selectCommand(Comanda command) async {
+    await _selectByCode(command.codigoComanda);
+  }
+
+  Future<void> _selectByCode(int codigoComanda) async {
+    setState(() {
+      _consulting = true;
+    });
+
+    try {
+      final selection = await _repository.lookupCommand(codigoComanda);
+      if (!mounted) {
+        return;
+      }
+
+      if (selection.estaBloqueada) {
+        _showMessage('Comanda bloqueada. Operacao nao pode ser realizada.');
+        return;
+      }
+
+      Navigator.of(context).pop(selection);
+    } catch (error) {
+      if (mounted) {
+        _showMessage(error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _consulting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _changeMesa(Comanda command) async {
+    if (command.estaBloqueada || _busy) {
+      _showMessage('Comanda bloqueada. Operacao nao pode ser realizada.');
+      return;
+    }
+
+    final novaMesa = await showDialog<int>(
+      context: context,
+      builder: (_) => _MesaDialog(initialValue: command.codigoMesa),
+    );
+
+    if (novaMesa == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+    });
+
+    try {
+      await _repository.updateMesa(
+        employee: widget.employee,
+        codigoComanda: command.codigoComanda,
+        novaMesa: novaMesa,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage('Mesa alterada');
+      _reload();
+    } catch (error) {
+      if (mounted) {
+        _showMessage(error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteCommand(Comanda command) async {
+    if (command.estaBloqueada || _busy) {
+      _showMessage('Comanda bloqueada. Operacao nao pode ser realizada.');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Excluir comanda'),
+        content: Text('Excluir a comanda ${command.codigoComanda}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    Funcionario authorizedEmployee = widget.employee;
+    if (widget.config.requirePasswordToDelete) {
+      final password = await showDialog<String>(
+        context: context,
+        builder: (_) => const _PasswordDialog(),
+      );
+
+      if (password == null || password.isEmpty || !mounted) {
+        return;
+      }
+
+      setState(() {
+        _busy = true;
+      });
+
+      try {
+        final employeeRepository = EmployeeRepository(config: widget.config);
+        final authorization = await employeeRepository.validateDeletePassword(
+          password,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        if (authorization == null) {
+          _showMessage('Senha invalida');
+          return;
+        }
+
+        authorizedEmployee = authorization;
+      } catch (error) {
+        if (mounted) {
+          _showMessage(error.toString());
+        }
+        return;
+      } finally {
+        if (mounted) {
+          setState(() {
+            _busy = false;
+          });
+        }
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+    });
+
+    try {
+      await _repository.deleteCommand(
+        employee: authorizedEmployee,
+        codigoComanda: command.codigoComanda,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage('Comanda excluida');
+      Navigator.of(context).pop(
+        const CommandSelection(
+          codigoComanda: 0,
+          codigoMesa: 0,
+          codigoTag: 0,
+          bloqueio: 0,
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        _showMessage(error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Comandas'),
+        actions: [
+          IconButton(
+            tooltip: 'Atualizar',
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _CommandInputCard(
+              controller: _commandController,
+              employee: widget.employee,
+              consulting: _consulting,
+              onConsult: _consultTypedCommand,
+            ),
+            const SizedBox(height: 16),
+            FutureBuilder<List<Comanda>>(
+              future: _commandsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return _CommandError(
+                    message: snapshot.error.toString(),
+                    onRetry: _reload,
+                  );
+                }
+
+                final commands = snapshot.data ?? const <Comanda>[];
+                if (commands.isEmpty) {
+                  return _CommandError(
+                    message: 'Nenhuma comanda aberta encontrada.',
+                    onRetry: _reload,
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Comandas abertas',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    ...commands.map(
+                      (command) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _CommandTile(
+                          command: command,
+                          enabled: !_consulting && !_busy,
+                          onTap: _consulting || _busy
+                              ? null
+                              : () => _selectCommand(command),
+                          onChangeMesa: () => _changeMesa(command),
+                          onDelete: () => _deleteCommand(command),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MesaDialog extends StatefulWidget {
+  const _MesaDialog({required this.initialValue});
+
+  final int initialValue;
+
+  @override
+  State<_MesaDialog> createState() => _MesaDialogState();
+}
+
+class _MesaDialogState extends State<_MesaDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.initialValue > 0 ? widget.initialValue.toString() : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final mesa = int.tryParse(_controller.text.trim());
+    if (mesa == null || mesa < 0) {
+      setState(() {
+        _error = 'Informe uma mesa valida';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(mesa);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Trocar mesa'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _confirm(),
+        decoration: InputDecoration(
+          labelText: 'Nova mesa',
+          prefixIcon: const Icon(Icons.table_restaurant_outlined),
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _confirm, child: const Text('Salvar')),
+      ],
+    );
+  }
+}
+
+class _PasswordDialog extends StatefulWidget {
+  const _PasswordDialog();
+
+  @override
+  State<_PasswordDialog> createState() => _PasswordDialogState();
+}
+
+class _PasswordDialogState extends State<_PasswordDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    Navigator.of(context).pop(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Senha'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        obscureText: true,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _confirm(),
+        decoration: const InputDecoration(
+          labelText: 'Senha autorizada',
+          prefixIcon: Icon(Icons.password_outlined),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _confirm, child: const Text('Confirmar')),
+      ],
+    );
+  }
+}
+
+class _CommandInputCard extends StatelessWidget {
+  const _CommandInputCard({
+    required this.controller,
+    required this.employee,
+    required this.consulting,
+    required this.onConsult,
+  });
+
+  final TextEditingController controller;
+  final Funcionario employee;
+  final bool consulting;
+  final VoidCallback onConsult;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.badge_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    employee.nome,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => onConsult(),
+              decoration: const InputDecoration(
+                labelText: 'Codigo da comanda',
+                prefixIcon: Icon(Icons.receipt_long_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: consulting ? null : onConsult,
+                icon: consulting
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search_outlined),
+                label: const Text('Consultar comanda'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommandTile extends StatelessWidget {
+  const _CommandTile({
+    required this.command,
+    required this.enabled,
+    required this.onTap,
+    required this.onChangeMesa,
+    required this.onDelete,
+  });
+
+  final Comanda command;
+  final bool enabled;
+  final VoidCallback? onTap;
+  final VoidCallback onChangeMesa;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: command.estaBloqueada
+              ? theme.colorScheme.errorContainer
+              : theme.colorScheme.primaryContainer,
+          child: Text(command.codigoComanda.toString()),
+        ),
+        title: Text('Comanda ${command.codigoComanda}'),
+        subtitle: Text(_subtitle),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (command.estaBloqueada)
+              Icon(Icons.lock_outline, color: theme.colorScheme.error)
+            else
+              const Icon(Icons.chevron_right),
+            PopupMenuButton<_CommandAction>(
+              enabled: enabled && !command.estaBloqueada,
+              onSelected: (action) {
+                switch (action) {
+                  case _CommandAction.changeMesa:
+                    onChangeMesa();
+                  case _CommandAction.delete:
+                    onDelete();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _CommandAction.changeMesa,
+                  child: ListTile(
+                    leading: Icon(Icons.table_restaurant_outlined),
+                    title: Text('Trocar mesa'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _CommandAction.delete,
+                  child: ListTile(
+                    leading: Icon(Icons.delete_outline),
+                    title: Text('Excluir comanda'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  String get _subtitle {
+    final parts = <String>[
+      if (command.codigoMesa > 0) 'Mesa ${command.codigoMesa}',
+      if (command.codigoTag > 0) 'Tag ${command.codigoTag}',
+      command.nomeFuncionario,
+      'R\$ ${command.valorTotal.toStringAsFixed(2)}',
+    ];
+
+    return parts.where((part) => part.trim().isNotEmpty).join(' - ');
+  }
+}
+
+enum _CommandAction { changeMesa, delete }
+
+class _CommandError extends StatelessWidget {
+  const _CommandError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 42,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Atualizar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

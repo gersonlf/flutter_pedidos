@@ -1,0 +1,145 @@
+object FormProduto: TFormProduto
+  Left = 0
+  Top = 0
+  Caption = 'Produtos'
+  ClientHeight = 550
+  ClientWidth = 320
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object LayoutBase: TLayout
+    Align = Contents
+    Size.Width = 320.000000000000000000
+    Size.Height = 550.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    object RectangleMenu: TRectangle
+      Align = Top
+      Fill.Color = claRoyalblue
+      HitTest = False
+      Size.Width = 320.000000000000000000
+      Size.Height = 60.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      object LabelMenu: TLabel
+        Align = Contents
+        StyledSettings = [Family]
+        Locked = True
+        Size.Width = 320.000000000000000000
+        Size.Height = 60.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 16.000000000000000000
+        TextSettings.Font.StyleExt = {00060000000000000004000000}
+        TextSettings.FontColor = claWhite
+        TextSettings.HorzAlign = Center
+        Text = 'Produtos'
+        TabOrder = 0
+      end
+      object ImageVoltar: TImage
+        MultiResBitmap.Height = 64
+        MultiResBitmap.Width = 64
+        MultiResBitmap = <
+          item
+            Width = 64
+            Height = 64
+            PNG = {
+              89504E470D0A1A0A0000000D4948445200000040000000400806000000AA6971
+              DE000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              023449444154785EED9ABD6A1B411485A555A13F12501A37AED38444F9B10D7E
+              02E327709722CF1202EE02E9F30001752E5C844052442EDCFA0D0206C77F48AC
+              A4851DC967E2B301B1927647411BCDF5FD9A7B357BAFE01CCDCEEE0C2A298AA2
+              288AA214C164326919630EE338FE8178341E8F0F78493E10FB7A341A5DC08429
+              60C46796C8C58A1F0E87D7D49C42F44CC8126FB1B703CB0B27605C09567C1445
+              5F6BB55A8B433381078F9916CECA0CC82BDE52A9547E3295419E699FC08531D3
+              246F70116FEB6C3D5BFD47C5ABF86C1EBC7884376CF51F47F137082A5E04AEE2
+              51BFC556FF51F139C5835BD46FB3D57F54BC8ACF8515BFC356FF7114BF56F47A
+              BDD018D381864DCA99499931051A9F623F7F92673FBFCE60BB7D5DAD56DB4110
+              FCE2D014730F4460E207DFC55BA0E109B47CE4C714730DC00C6833F59E300CF7
+              99A658742436F7F690C45C0370CF9C31F59E66B379CC34C5A245F0199E00DD46
+              A3F188435EB2F422686740BD5EDF1B0C067D0E7945BFDF1FE047EC2C129F0B7C
+              C92E1691DE9F876B36B25E8412963041CEAB70828B09583B646D8313D404E06A
+              02829CA3B0044713641D83272C61C22BB6CAC1D1842B35012620BC64AB1C5C4C
+              C0ABE925EAC5EC34FFB284092FD82A0747137EAB09F7263C67AB1C5C4C88A2E8
+              1CF5FFED4F522BC3C50463CC7BB6C922AF09711C7F674BE12C3A13FC678220E8
+              E639542997CB21539964CD045C7FCB52B95813A0F5F65EF2145F58221F98B081
+              05EF13449F227EC3E777BCA4288AA2288A5230A5D21D487AA2BE3AF532570000
+              000049454E44AE426082}
+            FileName = 'C:\developer\delphi-rio-estoque\Resources\back.png'
+          end>
+        Align = Left
+        Margins.Left = 5.000000000000000000
+        Margins.Top = 5.000000000000000000
+        Margins.Bottom = 5.000000000000000000
+        Position.X = 5.000000000000000000
+        Position.Y = 5.000000000000000000
+        Size.Width = 50.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+      end
+    end
+    object ListView: TListView
+      ItemAppearanceClassName = 'TDynamicAppearance'
+      ItemEditAppearanceClassName = 'TDynamicAppearance'
+      HeaderAppearanceClassName = 'TListHeaderObjects'
+      FooterAppearanceClassName = 'TListHeaderObjects'
+      OnUpdateObjects = ListViewUpdateObjects
+      AlternatingColors = True
+      Align = Client
+      Size.Width = 320.000000000000000000
+      Size.Height = 490.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      ItemAppearance.ItemHeight = 80
+      ItemAppearance.ItemEditHeight = 80
+      ItemAppearanceObjects.ItemObjects.ObjectsCollection = <
+        item
+          AppearanceObjectName = 'Text1'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text2'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text3'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text4'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text5'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text6'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text7'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text8'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text9'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text10'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text11'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end>
+      ItemAppearanceObjects.ItemEditObjects.ObjectsCollection = <>
+      CanSwipeDelete = False
+      ShowSelection = False
+    end
+  end
+end

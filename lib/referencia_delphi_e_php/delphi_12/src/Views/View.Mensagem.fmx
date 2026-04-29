@@ -1,0 +1,83 @@
+object ViewMensagem: TViewMensagem
+  Left = 0
+  Top = 0
+  Caption = 'Mensagem'
+  ClientHeight = 550
+  ClientWidth = 320
+  Position = DesktopCenter
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnClose = FormClose
+  DesignerMasterStyle = 0
+  object Layout: TLayout
+    Align = Contents
+    Size.Width = 320.000000000000000000
+    Size.Height = 550.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object Rectangle: TRectangle
+      Align = Contents
+      Fill.Kind = Gradient
+      Fill.Gradient.Points = <
+        item
+          Color = xFFEF9494
+          Offset = 0.000000000000000000
+        end
+        item
+          Color = claWhite
+          Offset = 1.000000000000000000
+        end>
+      Fill.Gradient.StartPosition.X = 0.500000000000000000
+      Fill.Gradient.StartPosition.Y = 1.000000000000000000
+      Fill.Gradient.StopPosition.X = 0.499999970197677600
+      Fill.Gradient.StopPosition.Y = 0.000000000000000000
+      Size.Width = 320.000000000000000000
+      Size.Height = 550.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+    end
+    object LabelMensagem: TLabel
+      Align = Center
+      StyledSettings = [Family]
+      Size.Width = 259.000000000000000000
+      Size.Height = 111.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 26.000000000000000000
+      TextSettings.Font.StyleExt = {00060000000000000004000000}
+      TextSettings.FontColor = claWhite
+      TextSettings.HorzAlign = Center
+      Text = 'LabelMensagem'
+      TabOrder = 1
+    end
+    object RoundRectOK: TRoundRect
+      Align = Bottom
+      Fill.Color = claRed
+      Margins.Left = 20.000000000000000000
+      Margins.Right = 20.000000000000000000
+      Margins.Bottom = 30.000000000000000000
+      Position.X = 20.000000000000000000
+      Position.Y = 470.000000000000000000
+      Size.Width = 280.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      OnClick = RoundRectOKClick
+      object LabelOK: TLabel
+        Align = Client
+        StyledSettings = [Family]
+        Locked = True
+        Size.Width = 280.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 16.000000000000000000
+        TextSettings.Font.StyleExt = {00060000000000000004000000}
+        TextSettings.FontColor = claWhite
+        TextSettings.HorzAlign = Center
+        Text = 'OK'
+        TabOrder = 0
+      end
+    end
+  end
+end

@@ -1,0 +1,403 @@
+object FormConfiguracao: TFormConfiguracao
+  Left = 0
+  Top = 0
+  Caption = 'Configura'#231#245'es'
+  ClientHeight = 550
+  ClientWidth = 320
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object LayoutBase: TLayout
+    Align = Contents
+    Size.Width = 320.000000000000000000
+    Size.Height = 550.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    object Rectangle1: TRectangle
+      Align = Top
+      Fill.Color = claRoyalblue
+      HitTest = False
+      Size.Width = 320.000000000000000000
+      Size.Height = 60.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      object Label1: TLabel
+        Align = Contents
+        StyledSettings = [Family]
+        Locked = True
+        Size.Width = 320.000000000000000000
+        Size.Height = 60.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 16.000000000000000000
+        TextSettings.Font.StyleExt = {00060000000000000004000000}
+        TextSettings.FontColor = claWhite
+        TextSettings.HorzAlign = Center
+        Text = 'Configura'#231#245'es'
+        TabOrder = 0
+      end
+    end
+    object Layout1: TLayout
+      Align = Center
+      Size.Width = 288.000000000000000000
+      Size.Height = 488.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      object RoundRectConfirmar: TRoundRect
+        Align = Top
+        Fill.Color = claRoyalblue
+        Margins.Top = 10.000000000000000000
+        Position.Y = 425.000000000000000000
+        Size.Width = 288.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Kind = None
+        object LabelConfirmar: TLabel
+          Align = Client
+          StyledSettings = [Family]
+          Locked = True
+          Size.Width = 288.000000000000000000
+          Size.Height = 50.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 16.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = claWhite
+          TextSettings.HorzAlign = Center
+          Text = 'Confirmar'
+          TabOrder = 0
+        end
+      end
+      object Layout2: TLayout
+        Align = Top
+        Size.Width = 288.000000000000000000
+        Size.Height = 55.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+        object Label2: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Size.Width = 288.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 14.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = xFFAEAEAE
+          TextSettings.HorzAlign = Center
+          Text = 'Endere'#231'o Servidor'
+          TabOrder = 0
+        end
+        object RectangleEndereco: TRectangle
+          Align = Client
+          Fill.Color = claWhitesmoke
+          Size.Width = 288.000000000000000000
+          Size.Height = 38.000000000000000000
+          Size.PlatformDefault = False
+          Stroke.Kind = None
+          XRadius = 3.000000000000000000
+          YRadius = 3.000000000000000000
+          object LabelEndereco: TLabel
+            Align = Client
+            StyledSettings = [Family]
+            Locked = True
+            Opacity = 0.800000011920929000
+            Size.Width = 288.000000000000000000
+            Size.Height = 38.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            TextSettings.Font.StyleExt = {00060000000000000004000000}
+            TextSettings.FontColor = claRoyalblue
+            TextSettings.HorzAlign = Center
+            Text = '127.0.0.1'
+            TabOrder = 1
+          end
+        end
+      end
+      object Layout3: TLayout
+        Align = Top
+        Margins.Top = 5.000000000000000000
+        Position.Y = 60.000000000000000000
+        Size.Width = 288.000000000000000000
+        Size.Height = 55.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 5
+        object Label3: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Size.Width = 288.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 14.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = xFFAEAEAE
+          TextSettings.HorzAlign = Center
+          Text = 'Porta'
+          TabOrder = 0
+        end
+        object RectanglePorta: TRectangle
+          Align = Client
+          Fill.Color = claWhitesmoke
+          Size.Width = 288.000000000000000000
+          Size.Height = 38.000000000000000000
+          Size.PlatformDefault = False
+          Stroke.Kind = None
+          XRadius = 3.000000000000000000
+          YRadius = 3.000000000000000000
+          object LabelPorta: TLabel
+            Align = Client
+            StyledSettings = [Family]
+            Locked = True
+            Opacity = 0.800000011920929000
+            Size.Width = 288.000000000000000000
+            Size.Height = 38.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            TextSettings.Font.StyleExt = {00060000000000000004000000}
+            TextSettings.FontColor = claRoyalblue
+            TextSettings.HorzAlign = Center
+            Text = '80'
+            TabOrder = 1
+          end
+        end
+      end
+      object Layout4: TLayout
+        Align = Top
+        Margins.Top = 5.000000000000000000
+        Position.Y = 120.000000000000000000
+        Size.Width = 288.000000000000000000
+        Size.Height = 55.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 4
+        object Label4: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Size.Width = 288.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 14.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = xFFAEAEAE
+          TextSettings.HorzAlign = Center
+          Text = 'Contexto'
+          TabOrder = 0
+        end
+        object RectangleContexto: TRectangle
+          Align = Client
+          Fill.Color = claWhitesmoke
+          Size.Width = 288.000000000000000000
+          Size.Height = 38.000000000000000000
+          Size.PlatformDefault = False
+          Stroke.Kind = None
+          XRadius = 3.000000000000000000
+          YRadius = 3.000000000000000000
+          object LabelContexto: TLabel
+            Align = Client
+            StyledSettings = [Family]
+            Locked = True
+            Opacity = 0.800000011920929000
+            Size.Width = 288.000000000000000000
+            Size.Height = 38.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            TextSettings.Font.StyleExt = {00060000000000000004000000}
+            TextSettings.FontColor = claRoyalblue
+            TextSettings.HorzAlign = Center
+            Text = 'pedido.teste'
+            TabOrder = 1
+          end
+        end
+      end
+      object Layout5: TLayout
+        Align = Top
+        Margins.Top = 5.000000000000000000
+        Position.Y = 180.000000000000000000
+        Size.Width = 288.000000000000000000
+        Size.Height = 55.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 3
+        object Label5: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Size.Width = 288.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 14.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = xFFAEAEAE
+          TextSettings.HorzAlign = Center
+          Text = 'Protocolo'
+          TabOrder = 0
+        end
+        object RectangleProtocolo: TRectangle
+          Align = Client
+          Fill.Color = claWhitesmoke
+          Size.Width = 288.000000000000000000
+          Size.Height = 38.000000000000000000
+          Size.PlatformDefault = False
+          Stroke.Kind = None
+          XRadius = 3.000000000000000000
+          YRadius = 3.000000000000000000
+          OnClick = RectangleProtocoloClick
+          object LabelProtocolo: TLabel
+            Align = Client
+            StyledSettings = [Family]
+            Locked = True
+            Opacity = 0.800000011920929000
+            Size.Width = 288.000000000000000000
+            Size.Height = 38.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            TextSettings.Font.StyleExt = {00060000000000000004000000}
+            TextSettings.FontColor = claRoyalblue
+            TextSettings.HorzAlign = Center
+            Text = 'https off'
+            TabOrder = 1
+          end
+        end
+      end
+      object Layout6: TLayout
+        Align = Top
+        Margins.Top = 5.000000000000000000
+        Position.Y = 240.000000000000000000
+        Size.Width = 288.000000000000000000
+        Size.Height = 55.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 2
+        object Label6: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Size.Width = 288.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 14.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = xFFAEAEAE
+          TextSettings.HorzAlign = Center
+          Text = 'Teclado Fisico'
+          TabOrder = 0
+        end
+        object RectangleTecladoFisico: TRectangle
+          Align = Client
+          Fill.Color = claWhitesmoke
+          Size.Width = 288.000000000000000000
+          Size.Height = 38.000000000000000000
+          Size.PlatformDefault = False
+          Stroke.Kind = None
+          XRadius = 3.000000000000000000
+          YRadius = 3.000000000000000000
+          OnClick = RectangleTecladoFisicoClick
+          object LabelTecladoFisico: TLabel
+            Align = Client
+            StyledSettings = [Family]
+            Locked = True
+            Opacity = 0.800000011920929000
+            Size.Width = 288.000000000000000000
+            Size.Height = 38.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            TextSettings.Font.StyleExt = {00060000000000000004000000}
+            TextSettings.FontColor = claRoyalblue
+            TextSettings.HorzAlign = Center
+            Text = 'teclado off'
+            TabOrder = 1
+          end
+        end
+      end
+      object Layout7: TLayout
+        Align = Top
+        Margins.Top = 5.000000000000000000
+        Position.Y = 300.000000000000000000
+        Size.Width = 288.000000000000000000
+        Size.Height = 55.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 6
+        object Label7: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Size.Width = 288.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 14.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = xFFAEAEAE
+          TextSettings.HorzAlign = Center
+          Text = 'Comanda com digito verificador'
+          TabOrder = 0
+        end
+        object RectangleComandaDigitoVerificador: TRectangle
+          Align = Client
+          Fill.Color = claWhitesmoke
+          Size.Width = 288.000000000000000000
+          Size.Height = 38.000000000000000000
+          Size.PlatformDefault = False
+          Stroke.Kind = None
+          XRadius = 3.000000000000000000
+          YRadius = 3.000000000000000000
+          OnClick = RectangleComandaDigitoVerificadorClick
+          object LabelComandaDigitoVerificador: TLabel
+            Align = Client
+            StyledSettings = [Family]
+            Locked = True
+            Opacity = 0.800000011920929000
+            Size.Width = 288.000000000000000000
+            Size.Height = 38.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            TextSettings.Font.StyleExt = {00060000000000000004000000}
+            TextSettings.FontColor = claRoyalblue
+            TextSettings.HorzAlign = Center
+            Text = 'digito verificador off'
+            TabOrder = 1
+          end
+        end
+      end
+      object Layout8: TLayout
+        Align = Top
+        Margins.Top = 5.000000000000000000
+        Position.Y = 360.000000000000000000
+        Size.Width = 288.000000000000000000
+        Size.Height = 55.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 7
+        object Label8: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Size.Width = 288.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 14.000000000000000000
+          TextSettings.Font.StyleExt = {00060000000000000004000000}
+          TextSettings.FontColor = xFFAEAEAE
+          TextSettings.HorzAlign = Center
+          Text = 'Excluir item ou comanda com senha'
+          TabOrder = 0
+        end
+        object RectangleExcluirItemComanda: TRectangle
+          Align = Client
+          Fill.Color = claWhitesmoke
+          Size.Width = 288.000000000000000000
+          Size.Height = 38.000000000000000000
+          Size.PlatformDefault = False
+          Stroke.Kind = None
+          XRadius = 3.000000000000000000
+          YRadius = 3.000000000000000000
+          OnClick = RectangleExcluirItemComandaClick
+          object LabelExcluirItemComanda: TLabel
+            Align = Client
+            StyledSettings = [Family]
+            Locked = True
+            Opacity = 0.800000011920929000
+            Size.Width = 288.000000000000000000
+            Size.Height = 38.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 16.000000000000000000
+            TextSettings.Font.StyleExt = {00060000000000000004000000}
+            TextSettings.FontColor = claRoyalblue
+            TextSettings.HorzAlign = Center
+            Text = 'digitar senha para excluir on'
+            TabOrder = 1
+          end
+        end
+      end
+    end
+  end
+end

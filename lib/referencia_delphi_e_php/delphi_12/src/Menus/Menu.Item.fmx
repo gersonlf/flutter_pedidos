@@ -1,0 +1,149 @@
+object MenuItem: TMenuItem
+  Left = 0
+  Top = 0
+  Caption = 'Comandas'
+  ClientHeight = 550
+  ClientWidth = 320
+  Position = ScreenCenter
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnClose = FormClose
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  DesignerMasterStyle = 0
+  object TabControl: TTabControl
+    Align = Contents
+    Size.Width = 320.000000000000000000
+    Size.Height = 550.000000000000000000
+    Size.PlatformDefault = False
+    TabIndex = 0
+    TabOrder = 0
+    TabPosition = None
+    Sizes = (
+      320s
+      550s
+      320s
+      550s
+      320s
+      550s
+      320s
+      550s)
+    object TabItemBase: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = True
+      Size.Width = 8.000000000000000000
+      Size.Height = 8.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'TabItemMenu'
+      ExplicitSize.cx = 8.000000000000000000
+      ExplicitSize.cy = 8.000000000000000000
+      object RectangleBase: TRectangle
+        Align = Contents
+        Fill.Color = claWhite
+        Size.Width = 320.000000000000000000
+        Size.Height = 550.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Kind = None
+      end
+    end
+    object TabItemTecladoAlfaNumerico: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 8.000000000000000000
+      Size.Height = 8.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'TabItemTecladoAlfaNumerico'
+      ExplicitSize.cx = 8.000000000000000000
+      ExplicitSize.cy = 8.000000000000000000
+      object RectangleTecladoAlfaNumerico: TRectangle
+        Align = Contents
+        Fill.Color = claWhite
+        Size.Width = 320.000000000000000000
+        Size.Height = 550.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Kind = None
+      end
+    end
+    object TabItemTecladoNumerico: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 8.000000000000000000
+      Size.Height = 8.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'TabItemTecladoNumerico'
+      ExplicitSize.cx = 8.000000000000000000
+      ExplicitSize.cy = 8.000000000000000000
+      object RectangleTecladoNumerico: TRectangle
+        Align = Contents
+        Fill.Color = claWhite
+        Size.Width = 320.000000000000000000
+        Size.Height = 550.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Kind = None
+      end
+    end
+    object TabItemProduto: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 8.000000000000000000
+      Size.Height = 8.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'TabItemProduto'
+      ExplicitSize.cx = 8.000000000000000000
+      ExplicitSize.cy = 8.000000000000000000
+      object RectangleProduto: TRectangle
+        Align = Contents
+        Fill.Color = claWhite
+        Size.Width = 320.000000000000000000
+        Size.Height = 550.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Kind = None
+      end
+    end
+  end
+  object Timer: TTimer
+    Enabled = False
+    Interval = 9000000
+    OnTimer = TimerTimer
+    Left = 157
+    Top = 243
+  end
+  object ActionList: TActionList
+    Left = 156
+    Top = 171
+    object ChangeTabActionBase: TChangeTabAction
+      Category = 'Tab'
+      Tab = TabItemBase
+    end
+    object ChangeTabActionTecladoAlfaNumerico: TChangeTabAction
+      Category = 'Tab'
+      Tab = TabItemTecladoAlfaNumerico
+    end
+    object ChangeTabActionTecladoNumerico: TChangeTabAction
+      Category = 'Tab'
+      Tab = TabItemTecladoNumerico
+    end
+    object ChangeTabActionProduto: TChangeTabAction
+      Category = 'Tab'
+      Tab = TabItemProduto
+    end
+  end
+end

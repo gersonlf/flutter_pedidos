@@ -1,0 +1,113 @@
+object FormFuncionario: TFormFuncionario
+  Left = 0
+  Top = 0
+  Caption = 'Funcio'#225'rios'
+  ClientHeight = 550
+  ClientWidth = 320
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object LayoutBase: TLayout
+    Align = Contents
+    Size.Width = 320.000000000000000000
+    Size.Height = 550.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object RectangleMenu: TRectangle
+      Align = Top
+      Fill.Color = claLightsalmon
+      Size.Width = 320.000000000000000000
+      Size.Height = 60.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      object LabelMenu: TLabel
+        Align = Contents
+        StyledSettings = [Family]
+        Size.Width = 320.000000000000000000
+        Size.Height = 60.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 16.000000000000000000
+        TextSettings.Font.StyleExt = {00060000000000000004000000}
+        TextSettings.FontColor = claWhite
+        TextSettings.HorzAlign = Center
+        Text = 'Funcionarios'
+        TabOrder = 0
+      end
+      object ImageMenu: TImage
+        MultiResBitmap.Height = 64
+        MultiResBitmap.Width = 64
+        MultiResBitmap = <
+          item
+            Width = 64
+            Height = 64
+            PNG = {
+              89504E470D0A1A0A0000000D4948445200000040000000400806000000AA6971
+              DE000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              018049444154785EED98B14EC250148669A184C88C7131E131747071D1C9D977
+              71F65D9C3BE9E2E2808F4162428C9D31A485D6FF9413E295D1A9BDDF979C9C72
+              DA81FF877B6FF30F0000000000E224F17EA0699A4475A2CB69922413F5B4BDD1
+              5D6AE9D9A8AFA5E75BD5ECC77B02034CBCDA48FD5675A7BA54991947467584C6
+              452F54B9EA59B3ED6F130261755D4FD5AE25FA7EB7DB5D1545715696E5683E9F
+              77D280E572D98CC7E3ED6C36FB1C0E876F12FEA4F16B9AA6EBFD13C7069C4AFC
+              A3C4DF645976EEE35E5055D5874C7891090F32E0CBC7E1FAD6CD890CB8B05FDE
+              47BDC1349936D3E8A396AE6F70FF2630400E6DE4D0BBAD191FF506D364DA4CA3
+              8F5AFEFE03ECA8C86DC3B035B35AAD2ADB48FC5EE7B0EF6E1A7CFDDB26986B7C
+              D8008D6013943BF639DE63D030135C74142F4200001033D11F83BC08796F210F
+              200F200F888EC00039441EA087C803D4C90374491E0000003D27FA63901721EF
+              2DE401E401E401D111182087C803F41079803A79802EC9030000000000FACA60
+              F003749DECBE676593330000000049454E44AE426082}
+            FileName = 'C:\developer\delphi-rio-estoque\Resources\menu.png'
+          end>
+        Align = Left
+        Margins.Left = 5.000000000000000000
+        Margins.Top = 5.000000000000000000
+        Margins.Bottom = 5.000000000000000000
+        Position.X = 5.000000000000000000
+        Position.Y = 5.000000000000000000
+        Size.Width = 50.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+      end
+    end
+    object ListView: TListView
+      ItemAppearanceClassName = 'TDynamicAppearance'
+      ItemEditAppearanceClassName = 'TDynamicAppearance'
+      HeaderAppearanceClassName = 'TListHeaderObjects'
+      FooterAppearanceClassName = 'TListHeaderObjects'
+      OnUpdateObjects = ListViewUpdateObjects
+      AlternatingColors = True
+      Align = Client
+      Size.Width = 320.000000000000000000
+      Size.Height = 490.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      ItemAppearance.ItemHeight = 80
+      ItemAppearance.ItemEditHeight = 80
+      ItemAppearanceObjects.ItemObjects.ObjectsCollection = <
+        item
+          AppearanceObjectName = 'Text1'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text2'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text3'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text4'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end>
+      ItemAppearanceObjects.ItemEditObjects.ObjectsCollection = <
+        item
+          AppearanceObjectName = 'Text1'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end>
+      CanSwipeDelete = False
+      ShowSelection = False
+    end
+  end
+end

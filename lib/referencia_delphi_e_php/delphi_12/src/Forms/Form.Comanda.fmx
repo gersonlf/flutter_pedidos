@@ -1,0 +1,250 @@
+object FormComanda: TFormComanda
+  Left = 0
+  Top = 0
+  Caption = 'Comandas'
+  ClientHeight = 550
+  ClientWidth = 320
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+  object LayoutBase: TLayout
+    Align = Contents
+    Size.Width = 320.000000000000000000
+    Size.Height = 550.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object RectangleMenu: TRectangle
+      Align = Top
+      Fill.Color = claMediumseagreen
+      HitTest = False
+      Size.Width = 320.000000000000000000
+      Size.Height = 60.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      object LabelMenu: TLabel
+        Align = Contents
+        StyledSettings = [Family]
+        Locked = True
+        Size.Width = 320.000000000000000000
+        Size.Height = 60.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 16.000000000000000000
+        TextSettings.Font.StyleExt = {00060000000000000004000000}
+        TextSettings.FontColor = claWhite
+        TextSettings.HorzAlign = Center
+        Text = 'Comandas'
+        TabOrder = 0
+      end
+      object ImageMenu: TImage
+        MultiResBitmap.Height = 64
+        MultiResBitmap.Width = 64
+        MultiResBitmap = <
+          item
+            Width = 64
+            Height = 64
+            PNG = {
+              89504E470D0A1A0A0000000D4948445200000040000000400806000000AA6971
+              DE000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              018449444154785EED98314EC34010456D279622D2A431A2E102390114343450
+              5173176AEE42ED0A1A1A8A70825C002942A4491314C989CD1F6714B1A4A4B2F7
+              3D6934CED845FE4F76D7FA0900000000409CA4DE0F344D93AA4E74394ED374A4
+              9EB537BA4B2D3D1BF5B5F47CAB9AFD784F608089571BAADFAAEE54972A33E3C8
+              A88ED0B8E899AA543D6BB6FD6D4220ACAEEBB1DAB544DFEF76BBABE57279B65A
+              AD86D3E9B49306CCE7F36632996C8BA2F81C0C066F12FEA4F16B9665EBFD13C7
+              069C4AFCA3C4DFE4797EEEE35E5055D5874C7891090F32E0CBC7E1FAD6CD910C
+              B8B05FDE47BDC1349936D3E8A396AE6F70FF2630400E6DE4D0BBAD191FF506D3
+              64DA4CA38F5AFEFE03ECA8286DC3B035B3582C2ADB48FC5EE7B0EF6E1A7CFDDB
+              26586A7CD8008D6013943BF639DE63D030135C74142F4200001033D11F83BC08
+              796F210F200F200F888EC00039441EA087C803D4C90374491E0000003D27FA63
+              901721EF2DE401E401E401D111182087C803F41079803A79802EC90300000000
+              00FA4A92FC009D7AEC0A720E4BBA0000000049454E44AE426082}
+            FileName = 'C:\developer\delphi-rio-estoque\Resources\menu.png'
+          end>
+        Align = Left
+        Margins.Left = 5.000000000000000000
+        Margins.Top = 5.000000000000000000
+        Margins.Bottom = 5.000000000000000000
+        Position.X = 5.000000000000000000
+        Position.Y = 5.000000000000000000
+        Size.Width = 50.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+      end
+      object ImageNovaComanda: TImage
+        MultiResBitmap.Height = 64
+        MultiResBitmap.Width = 64
+        MultiResBitmap = <
+          item
+            Width = 64
+            Height = 64
+            PNG = {
+              89504E470D0A1A0A0000000D4948445200000040000000400806000000AA6971
+              DE000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              017749444154785EED9B414E834018858168682065E15ACFE035BC8D57D17BB4
+              6EF51ADEC1AD2E688012DB419E791203D8E558E67F5F3279C33FB3E8FF989926
+              FF844808217CE39CBB391E0FDBB22C2B34F4FBD83587C30689364DF3DE7587EE
+              7743CC840978DBE3E47F5A3FB6E1B470C1929F4B1E0D639CE68D98EA0D24CAEE
+              2C717CE1F5372554B3C800AA596400D52C32806A161940358B0CA09A450650CD
+              2203A866910154B3C800AA5966EB6FA8DB779D7BA8AAFA6EBDCE328617C96E57
+              D7799EBDC471729F24C91BC3031303509B6FDBF675B5BABC622808F6FBCF8F34
+              4D6FC7264CB640FFE61F434B1E2027AC6A3E0E4C56006AF34B5FF67F81ED5014
+              45CEC76FF42F401DE80F8C677683038721BB033A04A903988089CE454FD8330C
+              2F16E4D0E7B29D4B1E78BD8703BA1B3C336400D52C32806A161940358B0CA09A
+              450650CD2203A866910154B3C800AA596400D52CDE0D385568FD8F22AC77034E
+              DD3BCCD5ED83C3FC475300898E3E9BDB98495E08714644D11752BCFE1ABF9E70
+              8A0000000049454E44AE426082}
+            FileName = 'C:\developer\delphi-rio-pedidos\resources\134224-64.png'
+          end>
+        Align = Right
+        Margins.Left = 5.000000000000000000
+        Margins.Top = 5.000000000000000000
+        Margins.Right = 5.000000000000000000
+        Margins.Bottom = 5.000000000000000000
+        Position.X = 265.000000000000000000
+        Position.Y = 5.000000000000000000
+        Size.Width = 50.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+      end
+    end
+    object ListView: TListView
+      ItemAppearanceClassName = 'TDynamicAppearance'
+      ItemEditAppearanceClassName = 'TDynamicAppearance'
+      HeaderAppearanceClassName = 'TListHeaderObjects'
+      FooterAppearanceClassName = 'TListHeaderObjects'
+      OnUpdateObjects = ListViewUpdateObjects
+      AlternatingColors = True
+      Align = Client
+      Size.Width = 320.000000000000000000
+      Size.Height = 455.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      ItemAppearance.ItemHeight = 80
+      ItemAppearance.ItemEditHeight = 80
+      ItemAppearanceObjects.ItemObjects.ObjectsCollection = <
+        item
+          AppearanceObjectName = 'image1'
+          AppearanceClassName = 'TImageObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text1'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text2'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text3'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text4'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text5'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text6'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text7'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text8'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end
+        item
+          AppearanceObjectName = 'Text9'
+          AppearanceClassName = 'TTextObjectAppearance'
+        end>
+      ItemAppearanceObjects.ItemEditObjects.ObjectsCollection = <>
+      CanSwipeDelete = False
+      ShowSelection = False
+    end
+    object ImageMaisOpcoes: TImage
+      MultiResBitmap.Height = 32
+      MultiResBitmap.Width = 32
+      MultiResBitmap = <
+        item
+          Width = 32
+          Height = 32
+          PNG = {
+            89504E470D0A1A0A0000000D4948445200000020000000200806000000737A7A
+            F4000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+            04B6494441545847ED574948644718AEB6DD17DA76434CBB246A6237410FEACD
+            6426100D363389B9981006E6A60715114F81804AE6260A22087A0C3387B93951
+            94A4413B2107151722491CB7414CEB45E342BB6F9DEFABAEF7EC6EDB75BC251F
+            34F5EAAF7AF57FFFFAAAC57F1E0635DE0AC3C3C3A14EA733242B2B2B9AF3A5A5
+            A5BDB4B4344F7575F5B1DC700BDC984047474784C7E3F9383434F40B8C0F20B2
+            180C8678AE61BE85C1859F13CFAF5253537FADACAC3CE2DA75B896000E347476
+            767E89C76746A3D19A9C9C2CD2D3D3457C7CBC888E960E107B7B7B626B6B4B2C
+            2F2F8BF5F575717272F227C87D575757F70AA3476EBA045712E8EAEA32E3B0E7
+            506CCFC9C911C5C5C5C2643289909010B5C31F67676792C8F8F8B858585820F9
+            1F8F8F8F9F363434D04341712981F6F6F6F7C2C3C3FB60A5ADB4B45420C6972A
+            0E0489ACACAC0887C341EFFC01231E83C4925AF64350026D6D6D09616161BF25
+            252559ED76BBB4FA2EA037060606C4C6C606497C14CC13174C62CCA1FC456C6C
+            ACB5BCBCFCCECA09E6090D80173F44F2FEC0B3D5920EA31A752424245422E6DF
+            9695950964B392DE1D919191920872E283B1B1B1DF0707075FAB25093F0F3435
+            354542F9F719191982BFFB426666A6AC1CE019CB590A15FC0820E69F6278BFA8
+            A8E8C6097713F0ACC2C2428192B461CA1EA243D7A2E2F328262646A4A4A47885
+            F70886332A2A4AC0C39F2B91844EA0A7A72714C343BA0A9BBC42E0F4F4546C6E
+            6ECA31102C37FE02016304EA5FCDBCE099168B856B9F7477778729B1A05209D4
+            BCD1ED76A723FB95C4DBE17A7B7B2501B3D92C2A2A2AF4EEC7AE87EF81545652
+            5222B2B3B3A5FCE8E84896DEEAEAAAEC1DAC029C2DD7E2E2E268C83B070707BA
+            E1FA03EAD4848C8DA69B34CCCCCC48E50447CE095A4DE5202C767676E4B3E609
+            EE611322318EDA3B04CF46399A9013BA953A012CC81AF575B566AD06DF391568
+            A0726D8E4493A306DF64D648C223FAA6F355342EC4ED806ED7909797270A0A0A
+            581D72E49CE0A1743B6B9CEEE5B39637369B4D86232222428E56AB55CA89DDDD
+            5D127523046E253A6FC54C0C84E12FD46C0EE3E66B0999072B4BCD5BBE49AB21
+            F01D7AA8BFBF9FB9F31A9D365FBB3BE83BAAAAAA4EF0D22F2E97EB420607534E
+            507130E544E03B878787322740DA495D4A7C4E80DF6DFCFAE005B1B8B8A8A4F7
+            079E498F81701F7529B15F0E90E5CFF0C29B8989890B5E781BD07ADE11A0786E
+            6D6D6D488925FC08343636EEC375CDDBDBDB627272D22FD3EF0A9E31353525CB
+            15C635B5B4B41CA825890BC1ADA9A9790EA64E7A81B79AB7C5DCDC9C3406673A
+            6A6B6B5F2AB18E0B04181F94E25788D79BA1A121313B3BABD7EF6DC077D88454
+            B79CDFDFDFFFC637F61A82A630AE52BBB80F38F068C795DBCCF6CACB28CAC7BB
+            E11A4099181D1D1523232324B2887C7A84F0FEAD96FDE0DFB602D0DADA9A82EE
+            F712163C64D3C9CFCF17B9B9B9FA2D0916C951CB155EC1E6E7E7C5F4F4B44C3C
+            60089EFCBABEBE7E4D6E08822B0910B8A4842426263E81B266FCDEA58C379CC0
+            6B391357FB6E008BB0BC19D7F217C1DCEE8B6B0968009168B4E4CF70F0631CFA
+            00D56281D8FB99C347107217E4FC63D20797FFC48A526B57E2C6043440818177
+            077EBED1D313294378FE419E9CB2C35D67F1FFF08710FF0256FC405A327F94D3
+            0000000049454E44AE426082}
+          FileName = 'C:\developer\delphi-rio-vendas\Resources\more.png'
+        end>
+      Position.X = 32.000000000000000000
+      Position.Y = 88.000000000000000000
+    end
+    object RectangleFuncionario: TRectangle
+      Align = Bottom
+      Fill.Color = xFF949494
+      Position.Y = 515.000000000000000000
+      Size.Width = 320.000000000000000000
+      Size.Height = 35.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      object LabelFuncionario: TLabel
+        Align = Client
+        StyledSettings = [Family]
+        Locked = True
+        Margins.Left = 5.000000000000000000
+        Size.Width = 315.000000000000000000
+        Size.Height = 35.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 14.000000000000000000
+        TextSettings.Font.StyleExt = {00060000000000000004000000}
+        TextSettings.FontColor = claWhite
+        TextSettings.HorzAlign = Center
+        Text = 'LabelFuncionario'
+        TabOrder = 0
+      end
+    end
+  end
+end

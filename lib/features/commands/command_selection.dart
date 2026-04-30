@@ -34,7 +34,7 @@ class CommandSelection {
   }
 
   String get resumo {
-    final parts = ['CMD $codigoComanda'];
+    final parts = ['Comanda $codigoComanda'];
     if (codigoMesa > 0) {
       parts.add('Mesa $codigoMesa');
     }

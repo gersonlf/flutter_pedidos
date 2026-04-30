@@ -10,6 +10,7 @@ import '../commands/command_selection_page.dart';
 import '../employees/employee_selection_page.dart';
 import '../items/item_list_page.dart';
 import '../kitchen/kitchen_page.dart';
+import '../products/product_search_page.dart';
 import '../settings/settings_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -49,16 +50,19 @@ class _HomePageState extends State<HomePage> {
         config: config,
       ).fetchCompanyConfig();
       return _HomeData(config: config, companyConfig: companyConfig);
-    } catch (error) {
-      return _HomeData(
-        config: config,
-        companyConfig: EmpresaConfig.defaults(),
-        companyError: error.toString(),
-      );
+    } catch (_) {
+      return _HomeData(config: config, companyConfig: EmpresaConfig.defaults());
     }
   }
 
   Future<void> _openSettings(AppConfig config) async {
+    if (config.hasSettingsPassword) {
+      final authorized = await _askSettingsPassword(config);
+      if (!authorized || !mounted) {
+        return;
+      }
+    }
+
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => SettingsPage(
@@ -73,7 +77,30 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _selectEmployee(AppConfig config) async {
+  Future<bool> _askSettingsPassword(AppConfig config) async {
+    final password = await showDialog<String>(
+      context: context,
+      builder: (_) => const _SettingsPasswordDialog(),
+    );
+
+    if (password == null) {
+      return false;
+    }
+
+    final authorized = password == config.settingsPassword;
+    if (!authorized && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Senha incorreta.')));
+    }
+
+    return authorized;
+  }
+
+  Future<void> _selectEmployee(
+    AppConfig config,
+    EmpresaConfig companyConfig,
+  ) async {
     final employee = await Navigator.of(context).push<Funcionario>(
       MaterialPageRoute(builder: (_) => EmployeeSelectionPage(config: config)),
     );
@@ -83,6 +110,8 @@ class _HomePageState extends State<HomePage> {
         _selectedEmployee = employee;
         _selectedCommand = null;
       });
+
+      await _selectCommand(config, companyConfig);
     }
   }
 
@@ -112,6 +141,10 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _selectedCommand = command.codigoComanda > 0 ? command : null;
       });
+
+      if (command.codigoComanda > 0) {
+        await _openItems(config, companyConfig);
+      }
     }
   }
 
@@ -170,6 +203,22 @@ class _HomePageState extends State<HomePage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => KitchenPage(config: config, employee: employee),
+      ),
+    );
+  }
+
+  Future<void> _openProductConsultation(AppConfig config) async {
+    if (!config.isServerConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Configure o servidor primeiro.')),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) =>
+            ProductSearchPage(config: config, selectionEnabled: false),
       ),
     );
   }
@@ -252,14 +301,16 @@ class _HomePageState extends State<HomePage> {
               : _HomeContent(
                   config: config,
                   companyConfig: homeData.companyConfig,
-                  companyError: homeData.companyError,
                   selectedEmployee: _selectedEmployee,
                   selectedCommand: _selectedCommand,
                   onConfigure: () => _openSettings(config),
-                  onSelectEmployee: () => _selectEmployee(config),
+                  onSelectEmployee: () =>
+                      _selectEmployee(config, homeData.companyConfig),
                   onSelectCommand: () =>
                       _selectCommand(config, homeData.companyConfig),
                   onOpenItems: () => _openItems(config, homeData.companyConfig),
+                  onOpenProductConsultation: () =>
+                      _openProductConsultation(config),
                   onOpenKitchen: () =>
                       _openKitchen(config, homeData.companyConfig),
                 ),
@@ -273,25 +324,25 @@ class _HomeContent extends StatelessWidget {
   const _HomeContent({
     required this.config,
     required this.companyConfig,
-    required this.companyError,
     required this.selectedEmployee,
     required this.selectedCommand,
     required this.onConfigure,
     required this.onSelectEmployee,
     required this.onSelectCommand,
     required this.onOpenItems,
+    required this.onOpenProductConsultation,
     required this.onOpenKitchen,
   });
 
   final AppConfig config;
   final EmpresaConfig companyConfig;
-  final String? companyError;
   final Funcionario? selectedEmployee;
   final CommandSelection? selectedCommand;
   final VoidCallback onConfigure;
   final VoidCallback onSelectEmployee;
   final VoidCallback onSelectCommand;
   final VoidCallback onOpenItems;
+  final VoidCallback onOpenProductConsultation;
   final VoidCallback onOpenKitchen;
 
   @override
@@ -300,15 +351,10 @@ class _HomeContent extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _ConnectionPanel(config: config, onConfigure: onConfigure),
-          if (companyError != null) ...[
+          if (!config.isServerConfigured) ...[
+            _ConnectionPanel(config: config, onConfigure: onConfigure),
             const SizedBox(height: 16),
-            _CompanyRulesError(message: companyError!),
-          ] else if (config.isServerConfigured) ...[
-            const SizedBox(height: 16),
-            _CompanyRulesPanel(companyConfig: companyConfig),
           ],
-          const SizedBox(height: 16),
           _EmployeePanel(
             employee: selectedEmployee,
             enabled: config.isServerConfigured,
@@ -321,14 +367,24 @@ class _HomeContent extends StatelessWidget {
             onSelectCommand: onSelectCommand,
           ),
           const SizedBox(height: 16),
-          _ModuleGrid(
+          _ItemsPanel(
+            command: selectedCommand,
+            enabled:
+                config.isServerConfigured &&
+                selectedEmployee != null &&
+                selectedCommand != null,
+            onOpenItems: onOpenItems,
+          ),
+          const SizedBox(height: 16),
+          _ProductConsultationPanel(
+            enabled: config.isServerConfigured,
+            onOpenProductConsultation: onOpenProductConsultation,
+          ),
+          const SizedBox(height: 16),
+          _KitchenPanel(
             configured: config.isServerConfigured,
             hasEmployee: selectedEmployee != null,
-            hasCommand: selectedCommand != null,
             kitchenEnabled: companyConfig.controlaCozinha,
-            onSelectEmployee: onSelectEmployee,
-            onSelectCommand: onSelectCommand,
-            onOpenItems: onOpenItems,
             onOpenKitchen: onOpenKitchen,
           ),
         ],
@@ -353,27 +409,92 @@ class _CommandPanel extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
+      color: theme.colorScheme.tertiaryContainer,
       child: ListTile(
         leading: Icon(
           command == null
               ? Icons.receipt_long_outlined
               : Icons.assignment_turned_in_outlined,
-          color: command == null
-              ? theme.colorScheme.onSurfaceVariant
-              : theme.colorScheme.primary,
+          color: theme.colorScheme.onTertiaryContainer,
         ),
-        title: Text(command?.resumo ?? 'Nenhuma comanda selecionada'),
-        subtitle: Text(
-          command == null
-              ? 'Informe ou selecione uma comanda para lancar itens'
-              : command!.estaBloqueada
-              ? 'Comanda bloqueada'
-              : 'Pronta para lancamento de itens',
+        title: Text(
+          command == null ? 'Consultar comandas' : 'Selecionar outra comanda',
         ),
         trailing: FilledButton.icon(
           onPressed: enabled ? onSelectCommand : null,
           icon: const Icon(Icons.search_outlined),
+          label: const Text('Selecionar'),
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemsPanel extends StatelessWidget {
+  const _ItemsPanel({
+    required this.command,
+    required this.enabled,
+    required this.onOpenItems,
+  });
+
+  final CommandSelection? command;
+  final bool enabled;
+  final VoidCallback onOpenItems;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: ListTile(
+        leading: Icon(
+          Icons.format_list_bulleted_outlined,
+          color: theme.colorScheme.primary,
+        ),
+        title: Text(command?.resumo ?? 'Itens'),
+        subtitle: Text(
+          command == null
+              ? 'Selecione uma comanda antes de lancar itens'
+              : command!.estaBloqueada
+              ? 'Comanda bloqueada'
+              : 'Abrir itens da comanda selecionada',
+        ),
+        trailing: FilledButton.icon(
+          onPressed: enabled ? onOpenItems : null,
+          icon: const Icon(Icons.open_in_new_outlined),
           label: const Text('Abrir'),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductConsultationPanel extends StatelessWidget {
+  const _ProductConsultationPanel({
+    required this.enabled,
+    required this.onOpenProductConsultation,
+  });
+
+  final bool enabled;
+  final VoidCallback onOpenProductConsultation;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      color: theme.colorScheme.errorContainer,
+      child: ListTile(
+        leading: Icon(
+          Icons.inventory_2_outlined,
+          color: theme.colorScheme.onErrorContainer,
+        ),
+        title: const Text('Pesquisar preco, codigo e dados do produto'),
+        trailing: FilledButton.icon(
+          onPressed: enabled ? onOpenProductConsultation : null,
+          icon: const Icon(Icons.search_outlined),
+          label: const Text('Consultar'),
         ),
       ),
     );
@@ -396,19 +517,17 @@ class _EmployeePanel extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
+      color: theme.colorScheme.primaryContainer,
       child: ListTile(
         leading: Icon(
           employee == null ? Icons.badge_outlined : Icons.verified_user,
-          color: employee == null
-              ? theme.colorScheme.onSurfaceVariant
-              : theme.colorScheme.primary,
+          color: theme.colorScheme.onPrimaryContainer,
         ),
-        title: Text(employee?.nome ?? 'Nenhum funcionario selecionado'),
-        subtitle: Text(
-          employee == null
-              ? 'Selecione um funcionario para iniciar o atendimento'
-              : 'Codigo ${employee!.codigo}',
+        title: Text(
+          employee?.nome ??
+              'Selecione um funcionario para iniciar o atendimento',
         ),
+        subtitle: employee == null ? null : Text('Codigo ${employee!.codigo}'),
         trailing: FilledButton.icon(
           onPressed: enabled ? onSelectEmployee : null,
           icon: const Icon(Icons.person_search_outlined),
@@ -477,258 +596,48 @@ class _ConnectionPanel extends StatelessWidget {
   }
 }
 
-class _CompanyRulesPanel extends StatelessWidget {
-  const _CompanyRulesPanel({required this.companyConfig});
-
-  final EmpresaConfig companyConfig;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.rule_outlined, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text('Regras da empresa', style: theme.textTheme.titleMedium),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _RuleChip(
-                  icon: Icons.table_restaurant_outlined,
-                  label: 'Mesa',
-                  enabled: companyConfig.controlaMesa,
-                ),
-                _RuleChip(
-                  icon: Icons.sell_outlined,
-                  label: 'Tag',
-                  enabled: companyConfig.controlaTag,
-                ),
-                _RuleChip(
-                  icon: Icons.room_service_outlined,
-                  label: 'Cozinha',
-                  enabled: companyConfig.controlaCozinha,
-                ),
-                _RuleChip(
-                  icon: Icons.swap_horiz_outlined,
-                  label: switch (companyConfig.controlaTroca) {
-                    TrocaComandaPolicy.exigeSenha => 'Troca com senha',
-                    TrocaComandaPolicy.desabilitada => 'Troca bloqueada',
-                    TrocaComandaPolicy.livre => 'Troca livre',
-                  },
-                  enabled:
-                      companyConfig.controlaTroca !=
-                      TrocaComandaPolicy.desabilitada,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RuleChip extends StatelessWidget {
-  const _RuleChip({
-    required this.icon,
-    required this.label,
-    required this.enabled,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Chip(
-      avatar: Icon(icon, size: 18),
-      label: Text(enabled ? label : '$label off'),
-      backgroundColor: enabled
-          ? theme.colorScheme.primaryContainer
-          : theme.colorScheme.surfaceContainerHighest,
-      side: BorderSide(color: theme.colorScheme.outlineVariant),
-    );
-  }
-}
-
-class _CompanyRulesError extends StatelessWidget {
-  const _CompanyRulesError({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: ListTile(
-        leading: Icon(
-          Icons.warning_amber_outlined,
-          color: theme.colorScheme.error,
-        ),
-        title: const Text('Regras da empresa nao carregadas'),
-        subtitle: Text(message),
-      ),
-    );
-  }
-}
-
-class _ModuleGrid extends StatelessWidget {
-  const _ModuleGrid({
+class _KitchenPanel extends StatelessWidget {
+  const _KitchenPanel({
     required this.configured,
     required this.hasEmployee,
-    required this.hasCommand,
     required this.kitchenEnabled,
-    required this.onSelectEmployee,
-    required this.onSelectCommand,
-    required this.onOpenItems,
     required this.onOpenKitchen,
   });
 
   final bool configured;
   final bool hasEmployee;
-  final bool hasCommand;
   final bool kitchenEnabled;
-  final VoidCallback onSelectEmployee;
-  final VoidCallback onSelectCommand;
-  final VoidCallback onOpenItems;
   final VoidCallback onOpenKitchen;
 
   @override
   Widget build(BuildContext context) {
-    final modules = [
-      const _ModuleAction(
-        icon: Icons.badge_outlined,
-        title: 'Funcionario',
-        subtitle: 'Selecionar operador',
-      ),
-      const _ModuleAction(
-        icon: Icons.receipt_long_outlined,
-        title: 'Comandas',
-        subtitle: 'Selecionar comanda',
-      ),
-      const _ModuleAction(
-        icon: Icons.format_list_bulleted_outlined,
-        title: 'Itens',
-        subtitle: 'Ver itens',
-      ),
-      const _ModuleAction(
-        icon: Icons.room_service_outlined,
-        title: 'Cozinha',
-        subtitle: 'Preparo',
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth >= 720 ? 4 : 2;
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: modules.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: crossAxisCount == 2 ? 1.15 : 1.25,
-          ),
-          itemBuilder: (context, index) {
-            return _ModuleTile(
-              action: modules[index],
-              enabled: switch (index) {
-                0 => configured,
-                1 => configured && hasEmployee,
-                2 => configured && hasEmployee && hasCommand,
-                3 => configured && hasEmployee && kitchenEnabled,
-                _ => false,
-              },
-              onTap: switch (index) {
-                0 => onSelectEmployee,
-                1 => onSelectCommand,
-                2 => onOpenItems,
-                3 => onOpenKitchen,
-                _ => null,
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _ModuleTile extends StatelessWidget {
-  const _ModuleTile({
-    required this.action,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final _ModuleAction action;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final enabled = configured && hasEmployee && kitchenEnabled;
 
     return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                action.icon,
-                color: enabled
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outline,
-              ),
-              const Spacer(),
-              Text(action.title, style: theme.textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                action.subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
+      color: theme.colorScheme.secondaryContainer,
+      child: ListTile(
+        leading: Icon(
+          Icons.room_service_outlined,
+          color: theme.colorScheme.onSecondaryContainer,
+        ),
+        title: Text(
+          !configured
+              ? 'Configure o servidor antes de acessar'
+              : !hasEmployee
+              ? 'Selecione um funcionario primeiro'
+              : kitchenEnabled
+              ? 'Pedidos prontos e entregues'
+              : 'Modulo desabilitado',
+        ),
+        trailing: FilledButton.icon(
+          onPressed: enabled ? onOpenKitchen : null,
+          icon: const Icon(Icons.open_in_new_outlined),
+          label: const Text('Abrir'),
         ),
       ),
     );
   }
-}
-
-class _ModuleAction {
-  const _ModuleAction({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
 }
 
 class _RequiredNumberDialog extends StatefulWidget {
@@ -795,14 +704,66 @@ class _RequiredNumberDialogState extends State<_RequiredNumberDialog> {
   }
 }
 
+class _SettingsPasswordDialog extends StatefulWidget {
+  const _SettingsPasswordDialog();
+
+  @override
+  State<_SettingsPasswordDialog> createState() =>
+      _SettingsPasswordDialogState();
+}
+
+class _SettingsPasswordDialogState extends State<_SettingsPasswordDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final password = _controller.text.trim();
+    if (password.isEmpty) {
+      setState(() {
+        _error = 'Informe a senha';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(password);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Senha da configuracao'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        obscureText: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _confirm(),
+        decoration: InputDecoration(
+          labelText: 'Senha',
+          prefixIcon: const Icon(Icons.lock_outline),
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _confirm, child: const Text('Entrar')),
+      ],
+    );
+  }
+}
+
 class _HomeData {
-  const _HomeData({
-    required this.config,
-    required this.companyConfig,
-    this.companyError,
-  });
+  const _HomeData({required this.config, required this.companyConfig});
 
   final AppConfig config;
   final EmpresaConfig companyConfig;
-  final String? companyError;
 }

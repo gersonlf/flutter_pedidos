@@ -8,10 +8,12 @@ class ProductSearchPage extends StatefulWidget {
   const ProductSearchPage({
     super.key,
     required this.config,
+    this.selectionEnabled = true,
     ProductRepository? repository,
   }) : _repository = repository;
 
   final AppConfig config;
+  final bool selectionEnabled;
   final ProductRepository? _repository;
 
   @override
@@ -41,7 +43,11 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Produtos')),
+      appBar: AppBar(
+        title: Text(
+          widget.selectionEnabled ? 'Produtos' : 'Consulta de Produtos',
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -49,27 +55,39 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        autofocus: true,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _search(),
-                        decoration: const InputDecoration(
-                          labelText: 'Produto, codigo ou barras',
-                          prefixIcon: Icon(Icons.search_outlined),
-                        ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final field = TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _search(),
+                      decoration: const InputDecoration(
+                        labelText: 'Produto, codigo ou barras',
+                        prefixIcon: Icon(Icons.search_outlined),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton.filled(
-                      tooltip: 'Pesquisar',
+                    );
+                    final button = FilledButton.icon(
                       onPressed: _search,
                       icon: const Icon(Icons.search),
-                    ),
-                  ],
+                      label: const Text('Pesquisar'),
+                    );
+
+                    if (constraints.maxWidth < 420) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [field, const SizedBox(height: 12), button],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: field),
+                        const SizedBox(width: 12),
+                        button,
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -110,7 +128,10 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                         .map(
                           (product) => Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: _ProductTile(product: product),
+                            child: _ProductTile(
+                              product: product,
+                              selectionEnabled: widget.selectionEnabled,
+                            ),
                           ),
                         )
                         .toList(),
@@ -125,30 +146,90 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
 }
 
 class _ProductTile extends StatelessWidget {
-  const _ProductTile({required this.product});
+  const _ProductTile({required this.product, required this.selectionEnabled});
 
   final Produto product;
+  final bool selectionEnabled;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(child: Text(product.codigo.toString())),
-        title: Text(product.descricao),
-        subtitle: Text(
-          [
-            if (product.codigoReduzido > 0) 'Red. ${product.codigoReduzido}',
-            if (product.codigoBarra.isNotEmpty) product.codigoBarra,
-            product.unidade,
-          ].join(' - '),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: selectionEnabled
+            ? () => Navigator.of(context).pop(product)
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              _ProductCodePill(code: product.codigo.toString()),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(product.descricao, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (product.codigoReduzido > 0)
+                          'Red. ${product.codigoReduzido}',
+                        if (product.codigoBarra.isNotEmpty) product.codigoBarra,
+                        product.unidade,
+                      ].join(' - '),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'R\$ ${product.valorUnitario.toStringAsFixed(2)}',
+                style: theme.textTheme.titleSmall,
+              ),
+            ],
+          ),
         ),
-        trailing: Text(
-          'R\$ ${product.valorUnitario.toStringAsFixed(2)}',
-          style: theme.textTheme.titleSmall,
+      ),
+    );
+  }
+}
+
+class _ProductCodePill extends StatelessWidget {
+  const _ProductCodePill({required this.code});
+
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: 72,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            code,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
         ),
-        onTap: () => Navigator.of(context).pop(product),
       ),
     );
   }

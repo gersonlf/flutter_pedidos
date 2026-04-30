@@ -7,6 +7,7 @@ class AppConfig {
     required this.physicalKeyboardEnabled,
     required this.commandCheckDigitEnabled,
     required this.requirePasswordToDelete,
+    required this.settingsPassword,
   });
 
   factory AppConfig.defaults() {
@@ -18,6 +19,7 @@ class AppConfig {
       physicalKeyboardEnabled: false,
       commandCheckDigitEnabled: false,
       requirePasswordToDelete: false,
+      settingsPassword: '',
     );
   }
 
@@ -28,6 +30,7 @@ class AppConfig {
   final bool physicalKeyboardEnabled;
   final bool commandCheckDigitEnabled;
   final bool requirePasswordToDelete;
+  final String settingsPassword;
 
   String get baseUrl => '${protocol.value}://$server:$port';
 
@@ -39,6 +42,8 @@ class AppConfig {
 
   bool get isServerConfigured => server.trim().isNotEmpty && server != 'sem ip';
 
+  bool get hasSettingsPassword => settingsPassword.isNotEmpty;
+
   AppConfig copyWith({
     String? server,
     int? port,
@@ -47,6 +52,7 @@ class AppConfig {
     bool? physicalKeyboardEnabled,
     bool? commandCheckDigitEnabled,
     bool? requirePasswordToDelete,
+    String? settingsPassword,
   }) {
     return AppConfig(
       server: server ?? this.server,
@@ -59,6 +65,7 @@ class AppConfig {
           commandCheckDigitEnabled ?? this.commandCheckDigitEnabled,
       requirePasswordToDelete:
           requirePasswordToDelete ?? this.requirePasswordToDelete,
+      settingsPassword: settingsPassword ?? this.settingsPassword,
     );
   }
 }

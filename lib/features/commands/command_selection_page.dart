@@ -729,78 +729,158 @@ class _CommandTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: command.estaBloqueada
-              ? theme.colorScheme.errorContainer
-              : theme.colorScheme.primaryContainer,
-          child: Text(command.codigoComanda.toString()),
-        ),
-        title: Text('Comanda ${command.codigoComanda}'),
-        subtitle: Text(_subtitle),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (command.estaBloqueada)
-              Icon(Icons.lock_outline, color: theme.colorScheme.error)
-            else
-              const Icon(Icons.chevron_right),
-            PopupMenuButton<_CommandAction>(
-              enabled: enabled && !command.estaBloqueada,
-              onSelected: (action) {
-                switch (action) {
-                  case _CommandAction.changeCommand:
-                    onChangeCommand();
-                  case _CommandAction.changeMesa:
-                    onChangeMesa();
-                  case _CommandAction.delete:
-                    onDelete();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _CommandAction.changeCommand,
-                  child: ListTile(
-                    leading: Icon(Icons.swap_horiz_outlined),
-                    title: Text('Trocar comanda'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: _CommandAction.changeMesa,
-                  child: ListTile(
-                    leading: Icon(Icons.table_restaurant_outlined),
-                    title: Text('Trocar mesa'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: _CommandAction.delete,
-                  child: ListTile(
-                    leading: Icon(Icons.delete_outline),
-                    title: Text('Excluir comanda'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              _CommandCodePill(
+                code: command.codigoComanda.toString(),
+                locked: command.estaBloqueada,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Comanda ${command.codigoComanda}',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: _badges
+                          .map((badge) => _CommandBadge(label: badge))
+                          .toList(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (command.estaBloqueada)
+                Icon(Icons.lock_outline, color: theme.colorScheme.error)
+              else
+                Icon(Icons.chevron_right, color: theme.colorScheme.primary),
+              PopupMenuButton<_CommandAction>(
+                enabled: enabled && !command.estaBloqueada,
+                onSelected: (action) {
+                  switch (action) {
+                    case _CommandAction.changeCommand:
+                      onChangeCommand();
+                    case _CommandAction.changeMesa:
+                      onChangeMesa();
+                    case _CommandAction.delete:
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _CommandAction.changeCommand,
+                    child: ListTile(
+                      leading: Icon(Icons.swap_horiz_outlined),
+                      title: Text('Trocar comanda'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _CommandAction.changeMesa,
+                    child: ListTile(
+                      leading: Icon(Icons.table_restaurant_outlined),
+                      title: Text('Trocar mesa'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _CommandAction.delete,
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('Excluir comanda'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  String get _subtitle {
-    final parts = <String>[
+  List<String> get _badges {
+    return <String>[
       if (command.codigoMesa > 0) 'Mesa ${command.codigoMesa}',
       if (command.codigoTag > 0) 'Tag ${command.codigoTag}',
-      command.nomeFuncionario,
+      if (command.nomeFuncionario.trim().isNotEmpty) command.nomeFuncionario,
       'R\$ ${command.valorTotal.toStringAsFixed(2)}',
     ];
-
-    return parts.where((part) => part.trim().isNotEmpty).join(' - ');
   }
 }
 
 enum _CommandAction { changeCommand, changeMesa, delete }
+
+class _CommandBadge extends StatelessWidget {
+  const _CommandBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(label, style: theme.textTheme.bodySmall),
+      ),
+    );
+  }
+}
+
+class _CommandCodePill extends StatelessWidget {
+  const _CommandCodePill({required this.code, required this.locked});
+
+  final String code;
+  final bool locked;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: 72,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: locked
+            ? theme.colorScheme.errorContainer
+            : theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            code,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: locked
+                  ? theme.colorScheme.onErrorContainer
+                  : theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CommandError extends StatelessWidget {
   const _CommandError({required this.message, required this.onRetry});

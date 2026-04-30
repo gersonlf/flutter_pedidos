@@ -18,6 +18,7 @@ void main() {
     physicalKeyboardEnabled: false,
     commandCheckDigitEnabled: false,
     requirePasswordToDelete: false,
+    settingsPassword: '',
   );
 
   const employee = Funcionario(codigo: 7, nome: 'ADRIANA');

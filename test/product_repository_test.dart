@@ -15,6 +15,7 @@ void main() {
     physicalKeyboardEnabled: false,
     commandCheckDigitEnabled: false,
     requirePasswordToDelete: false,
+    settingsPassword: '',
   );
 
   test('searchProducts tolerates PHP warnings around JSON list', () async {

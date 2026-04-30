@@ -11,6 +11,7 @@ class AppConfigStore {
   static const _commandCheckDigitKey = 'config.command_check_digit';
   static const _requirePasswordToDeleteKey =
       'config.require_password_to_delete';
+  static const _settingsPasswordKey = 'config.settings_password';
 
   Future<AppConfig> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -32,6 +33,8 @@ class AppConfigStore {
       requirePasswordToDelete:
           prefs.getBool(_requirePasswordToDeleteKey) ??
           defaults.requirePasswordToDelete,
+      settingsPassword:
+          prefs.getString(_settingsPasswordKey) ?? defaults.settingsPassword,
     );
   }
 
@@ -48,5 +51,6 @@ class AppConfigStore {
       _requirePasswordToDeleteKey,
       config.requirePasswordToDelete,
     );
+    await prefs.setString(_settingsPasswordKey, config.settingsPassword);
   }
 }

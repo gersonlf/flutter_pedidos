@@ -16,6 +16,7 @@ void main() {
     physicalKeyboardEnabled: false,
     commandCheckDigitEnabled: false,
     requirePasswordToDelete: false,
+    settingsPassword: '',
   );
 
   test('fetchCompanyConfig parses company flags from lerEmpresas', () async {

@@ -22,6 +22,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _serverController;
   late final TextEditingController _portController;
   late final TextEditingController _contextController;
+  late final TextEditingController _settingsPasswordController;
 
   late AppProtocol _protocol;
   late bool _physicalKeyboardEnabled;
@@ -36,6 +37,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _serverController = TextEditingController(text: config.server);
     _portController = TextEditingController(text: config.port.toString());
     _contextController = TextEditingController(text: config.context);
+    _settingsPasswordController = TextEditingController(
+      text: config.settingsPassword,
+    );
     _protocol = config.protocol;
     _physicalKeyboardEnabled = config.physicalKeyboardEnabled;
     _commandCheckDigitEnabled = config.commandCheckDigitEnabled;
@@ -47,6 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _serverController.dispose();
     _portController.dispose();
     _contextController.dispose();
+    _settingsPasswordController.dispose();
     super.dispose();
   }
 
@@ -67,6 +72,7 @@ class _SettingsPageState extends State<SettingsPage> {
       physicalKeyboardEnabled: _physicalKeyboardEnabled,
       commandCheckDigitEnabled: _commandCheckDigitEnabled,
       requirePasswordToDelete: _requirePasswordToDelete,
+      settingsPassword: _settingsPasswordController.text.trim(),
     );
 
     await widget.configStore.save(config);
@@ -194,6 +200,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _settingsPasswordController,
+                decoration: const InputDecoration(
+                  labelText: 'Senha da configuracao',
+                  prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+                ),
+                obscureText: true,
+                textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 24),
               FilledButton.icon(

@@ -370,15 +370,58 @@ class _KitchenOrderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(child: Text(order.codigoComanda.toString())),
-        title: Text('Comanda ${order.codigoComanda}'),
-        subtitle: const Text('Pedido de cozinha'),
-        trailing: FilledButton.icon(
-          onPressed: enabled ? onAction : null,
-          icon: Icon(actionIcon),
-          label: Text(actionLabel),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final button = FilledButton.icon(
+              onPressed: enabled ? onAction : null,
+              icon: Icon(actionIcon),
+              label: Text(actionLabel),
+            );
+            final content = Row(
+              children: [
+                CircleAvatar(child: Text(order.codigoComanda.toString())),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Comanda ${order.codigoComanda}',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Pedido de cozinha',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+
+            if (constraints.maxWidth < 420) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [content, const SizedBox(height: 12), button],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: 12),
+                button,
+              ],
+            );
+          },
         ),
       ),
     );

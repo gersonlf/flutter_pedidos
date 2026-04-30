@@ -15,6 +15,7 @@ void main() {
     physicalKeyboardEnabled: false,
     commandCheckDigitEnabled: false,
     requirePasswordToDelete: false,
+    settingsPassword: '',
   );
 
   test('postJson returns null for empty response when allowed', () async {

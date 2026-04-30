@@ -814,6 +814,10 @@ class _ItemDraftDialogState extends State<_ItemDraftDialog> {
   void initState() {
     super.initState();
     _quantityController = TextEditingController(text: '1');
+    _quantityController.selection = const TextSelection(
+      baseOffset: 0,
+      extentOffset: 1,
+    );
     _observationController = TextEditingController();
   }
 
@@ -1016,65 +1020,107 @@ class _ItemTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(child: Text(item.itemVenda.toString())),
-        title: Text(item.descricaoProduto),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${item.quantidade.toStringAsFixed(3)} x R\$ ${item.valorUnitario.toStringAsFixed(2)}',
-            ),
-            if (item.observacao.isNotEmpty)
-              Text(
-                item.observacao,
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-              ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'R\$ ${item.valorTotal.toStringAsFixed(2)}',
-              style: theme.textTheme.titleSmall,
-            ),
-            PopupMenuButton<_ItemAction>(
-              enabled: enabled,
-              onSelected: (action) {
-                switch (action) {
-                  case _ItemAction.changeCommand:
-                    onChangeCommand();
-                  case _ItemAction.observation:
-                    onChangeObservation();
-                  case _ItemAction.delete:
-                    onDelete();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _ItemAction.changeCommand,
-                  child: ListTile(
-                    leading: Icon(Icons.swap_horiz_outlined),
-                    title: Text('Trocar comanda'),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ItemCodePill(code: item.itemVenda.toString()),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item.descricaoProduto,
+                    style: theme.textTheme.titleMedium,
                   ),
                 ),
-                PopupMenuItem(
-                  value: _ItemAction.observation,
-                  child: ListTile(
-                    leading: Icon(Icons.notes_outlined),
-                    title: Text('Alterar observacao'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: _ItemAction.delete,
-                  child: ListTile(
-                    leading: Icon(Icons.delete_outline),
-                    title: Text('Excluir item'),
-                  ),
+                const SizedBox(width: 8),
+                PopupMenuButton<_ItemAction>(
+                  enabled: enabled,
+                  onSelected: (action) {
+                    switch (action) {
+                      case _ItemAction.changeCommand:
+                        onChangeCommand();
+                      case _ItemAction.observation:
+                        onChangeObservation();
+                      case _ItemAction.delete:
+                        onDelete();
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _ItemAction.changeCommand,
+                      child: ListTile(
+                        leading: Icon(Icons.swap_horiz_outlined),
+                        title: Text('Trocar comanda'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: _ItemAction.observation,
+                      child: ListTile(
+                        leading: Icon(Icons.notes_outlined),
+                        title: Text('Alterar observacao'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: _ItemAction.delete,
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline),
+                        title: Text('Excluir item'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _ItemBadge(
+                  label:
+                      '${item.quantidade.toStringAsFixed(3)} x R\$ ${item.valorUnitario.toStringAsFixed(2)}',
+                ),
+                _ItemBadge(
+                  label: 'Total R\$ ${item.valorTotal.toStringAsFixed(2)}',
+                  highlighted: true,
+                ),
+              ],
+            ),
+            if (item.observacao.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.notes_outlined,
+                        size: 18,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          item.observacao,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1083,6 +1129,66 @@ class _ItemTile extends StatelessWidget {
 }
 
 enum _ItemAction { changeCommand, observation, delete }
+
+class _ItemBadge extends StatelessWidget {
+  const _ItemBadge({required this.label, this.highlighted = false});
+
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: highlighted
+            ? theme.colorScheme.primaryContainer
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(label, style: theme.textTheme.bodySmall),
+      ),
+    );
+  }
+}
+
+class _ItemCodePill extends StatelessWidget {
+  const _ItemCodePill({required this.code});
+
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: 72,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            code,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _ItemError extends StatelessWidget {
   const _ItemError({required this.message, required this.onRetry});

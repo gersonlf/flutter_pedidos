@@ -1,4 +1,4 @@
-# Resumo do projeto flutter_pedidos
+﻿# Resumo do projeto flutter_pedidos
 
 Este arquivo resume o que foi feito ate agora na recriacao do sistema Delphi/PHP em Flutter. O objetivo do projeto nao e converter o Delphi literalmente, mas recriar o fluxo operacional em modulos pequenos, usando Flutter como novo app e mantendo compatibilidade inicial com os scripts PHP existentes.
 
@@ -54,12 +54,16 @@ Foi implementada a configuracao local do app, permitindo definir:
 - teclado fisico;
 - digito verificador de comanda;
 - exigencia de senha para excluir item/comanda.
+- senha local para acessar a tela de configuracao.
 
 Arquivos envolvidos:
 
 - `lib/core/config/app_config.dart`
 - `lib/core/config/app_config_store.dart`
 - `lib/features/settings/settings_page.dart`
+- `lib/features/home/home_page.dart`
+
+Atualizacao posterior: a senha local da configuracao foi adicionada ao modelo e a persistencia local. Quando preenchida, a Home exige a senha antes de abrir a tela de configuracao. Senha vazia mantem o acesso livre, preservando o comportamento inicial do app.
 
 ## Tela inicial
 
@@ -73,6 +77,10 @@ A Home passou a centralizar o fluxo principal:
 
 Ela tambem guarda o funcionario e a comanda selecionados durante o uso.
 
+Atualizacao posterior de UX: a Home passou por iteracoes de simplificacao para priorizar o fluxo operacional do garcom em telas menores.
+
+Atualizacao posterior: a Home foi simplificada para uso operacional. Quando o servidor ja esta configurado, ela nao mostra mais o card tecnico de configuracao nem as regras da empresa. A tela inicial ficou com cards coloridos para selecionar/mostrar funcionario, consultar/selecionar comandas, abrir itens da comanda selecionada, consultar produtos em modo somente leitura e abrir cozinha. A configuracao continua acessivel pelo botao no topo.
+
 Arquivo envolvido:
 
 - `lib/features/home/home_page.dart`
@@ -83,6 +91,8 @@ Foi implementado o modulo de funcionarios:
 
 - listagem de funcionarios via `lerFuncionarios.php`;
 - selecao de funcionario operador;
+- consulta por codigo de funcionario, com foco automatico no campo;
+- abertura automatica da tela de comandas apos selecionar/consultar funcionario;
 - validacao de senha autorizada para exclusao via `lerSenhas.php`.
 
 Arquivos envolvidos:
@@ -128,6 +138,7 @@ Foi implementado o suporte a produtos, acompanhamentos e adicionais:
 - busca de acompanhamentos via `lerAcompanhamentos.php`;
 - busca de adicionais via `lerAdicionais.php`;
 - tela de pesquisa de produto;
+- modo de consulta de produto, usado pela Home, sem permitir selecionar/incluir produto;
 - tela de selecao de opcoes para acompanhamentos/adicionais.
 
 Arquivos envolvidos:
@@ -144,6 +155,7 @@ Foi implementado o fluxo de itens:
 - listagem de itens da comanda via `lerItens.php`;
 - inclusao de item via `incluirItem.php`;
 - fluxo de quantidade e observacao;
+- quantidade inicial `1` ja selecionada no dialogo de inclusao, permitindo digitar outra quantidade por cima;
 - selecao de acompanhamentos;
 - selecao de adicionais;
 - inclusao de acompanhamentos e adicionais como itens separados;
@@ -326,6 +338,7 @@ Arquivos de suporte envolvidos:
 
 - `pubspec.yaml`
 - `pubspec.lock`
+- `test/app_config_store_test.dart`
 - `test/widget_test.dart`
 - `test/api_client_test.dart`
 - `test/command_check_digit_test.dart`
@@ -391,6 +404,12 @@ O ultimo estado validado passou em:
 - analise sem issues;
 - testes passando.
 
+Atualizacao posterior validada com:
+
+- `dart format lib test`
+- `dart analyze`
+- `flutter test`
+
 Observacao: a pasta atual ja esta inicializada como repositorio Git, com remoto `origin` apontando para `https://github.com/gersonlf/flutter_pedidos.git`.
 
 ## Estado atual do app
@@ -398,7 +417,7 @@ Observacao: a pasta atual ja esta inicializada como repositorio Git, com remoto 
 Hoje o app ja permite o fluxo basico:
 
 1. configurar servidor;
-2. selecionar funcionario;
+2. selecionar ou consultar funcionario por codigo;
 3. selecionar ou consultar comanda;
 4. trocar mesa da comanda;
 5. excluir comanda;
@@ -419,13 +438,13 @@ Hoje o app ja permite o fluxo basico:
 20. trocar comanda inteira conforme regra `controla_troca`;
 21. trocar item para outra comanda conforme regra `controla_troca`.
 22. aplicar digito verificador opcional somente na leitura/consulta de comanda.
+23. consultar produtos pela Home sem incluir item.
 
 ## Pontos ainda pendentes ou incompletos
 
 Alguns comportamentos do Delphi ainda nao foram recriados:
 
 - persistencia/troca de tag fora do fluxo de inclusao de item;
-- senha local para acessar configuracao;
 - refresh automatico periodico da Home;
 - tratamento centralizado de erros HTTP/PHP;
 - testes unitarios dos repositorios e modelos;
@@ -458,6 +477,23 @@ Alguns comportamentos do Delphi ainda nao foram recriados:
    - voltar da tela de itens ja enviando para cozinha quando fizer sentido;
    - reduzir toques para incluir varios itens na mesma comanda;
    - destacar status de bloqueio, mesa, tag e envio para cozinha.
+
+   Atualizacao posterior: foi iniciado e refinado o polimento visual/operacional para telas menores:
+
+   - botoes principais com altura minima maior;
+   - card de configuracao do servidor exibido somente quando o aparelho ainda nao esta configurado;
+   - card de regras da empresa removido da Home operacional;
+   - cards coloridos na Home para funcionario, comandas, itens, consulta de produtos e cozinha;
+   - card de Comandas focado em consultar/selecionar comandas, com botao `Selecionar`;
+   - card de Itens exibindo a comanda selecionada e abrindo diretamente os itens;
+   - card de Consulta de Produtos abrindo pesquisa em modo somente leitura;
+   - apos escolher um funcionario, o app abre a selecao de comandas automaticamente;
+   - apos escolher uma comanda, o app abre os itens automaticamente;
+   - codigos de funcionarios, comandas, produtos e itens passaram a usar pilulas largas, com texto centralizado e escala para ate 6 caracteres;
+   - resumo visual da comanda passou de `CMD` para `Comanda`;
+   - itens da comanda ganharam layout menos apertado para quantidade, total, observacao e menu;
+   - quantidade padrao `1` fica selecionada ao incluir item;
+   - busca de produtos e cozinha ganharam layout responsivo em telas estreitas.
 
 4. Testar contra servidor real
 

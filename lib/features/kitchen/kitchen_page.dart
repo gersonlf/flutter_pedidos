@@ -273,6 +273,7 @@ class _KitchenInputCard extends StatelessWidget {
                 prefixIcon: Icons.receipt_long_outlined,
                 mode: OperationalKeyboardMode.numeric,
                 color: const Color(0xFF35B779),
+                clearOnOpen: true,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 onConfirm: onCall,

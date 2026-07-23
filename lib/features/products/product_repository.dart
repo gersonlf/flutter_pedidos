@@ -4,6 +4,8 @@ import '../../core/config/app_config.dart';
 import '../../core/models/produto.dart';
 import '../../core/network/api_client.dart';
 
+enum ProductSearchMode { item, list }
+
 class ProductRepository {
   const ProductRepository({required this.config, http.Client? client})
     : _client = client;
@@ -11,14 +13,20 @@ class ProductRepository {
   final AppConfig config;
   final http.Client? _client;
 
-  Future<List<Produto>> searchProducts(String query) async {
-    return _fetchProducts(
+  Future<List<Produto>> searchProducts(
+    String query, {
+    ProductSearchMode mode = ProductSearchMode.list,
+  }) async {
+    final normalizedQuery = query.trim();
+    final products = await _fetchProducts(
       scriptName: 'lerProdutos',
-      body: {'consulta_produto': query.trim()},
+      body: {'consulta_produto': normalizedQuery},
       emptyMessage: 'Resposta invalida ao carregar produtos.',
       serverErrorPrefix: 'Erro carregando produtos',
       failurePrefix: 'Nao foi possivel carregar produtos',
     );
+
+    return _filterProducts(products, normalizedQuery, mode);
   }
 
   Future<List<Produto>> fetchAcompanhamentos(int codigoProduto) async {
@@ -75,6 +83,49 @@ class ProductRepository {
     } catch (error) {
       throw ProductRepositoryException('$failurePrefix: $error');
     }
+  }
+
+  List<Produto> _filterProducts(
+    List<Produto> products,
+    String query,
+    ProductSearchMode mode,
+  ) {
+    if (query.isEmpty) {
+      return products;
+    }
+
+    final numericValue = int.tryParse(query);
+    if (numericValue == null) {
+      final normalizedQuery = query.toLowerCase();
+      return products
+          .where(
+            (product) =>
+                product.descricao.toLowerCase().contains(normalizedQuery),
+          )
+          .toList();
+    }
+
+    if (mode == ProductSearchMode.item) {
+      return products.where((product) {
+        if (query.length > 7) {
+          return product.codigoBarra == query;
+        }
+        if (query.length < 6) {
+          return product.codigoReduzido == numericValue;
+        }
+        return product.codigo == numericValue;
+      }).toList();
+    }
+
+    return products
+        .where(
+          (product) =>
+              product.codigo == numericValue ||
+              product.codigoReduzido == numericValue ||
+              product.codigoBarra == query ||
+              product.descricao.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList();
   }
 }
 

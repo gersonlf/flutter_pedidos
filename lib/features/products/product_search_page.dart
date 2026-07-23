@@ -5,6 +5,8 @@ import '../../core/models/produto.dart';
 import '../../core/widgets/operational_keyboard.dart';
 import 'product_repository.dart';
 
+const _productColor = Color(0xFFE53935);
+
 class ProductSearchPage extends StatefulWidget {
   const ProductSearchPage({
     super.key,
@@ -29,6 +31,12 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
     return widget._repository ?? ProductRepository(config: widget.config);
   }
 
+  ProductSearchMode get _searchMode {
+    return widget.selectionEnabled
+        ? ProductSearchMode.item
+        : ProductSearchMode.list;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -44,8 +52,27 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
     }
 
     setState(() {
-      _productsFuture = _repository.searchProducts(_searchController.text);
+      _productsFuture = _repository.searchProducts(
+        _searchController.text,
+        mode: _searchMode,
+      );
     });
+  }
+
+  Future<String?> _previewProduct(String value) async {
+    final query = value.trim();
+    if (query.isEmpty) {
+      return null;
+    }
+
+    final products = await _repository.searchProducts(query, mode: _searchMode);
+    if (products.isEmpty) {
+      return null;
+    }
+
+    final product = products.first;
+    final price = product.valorUnitario.toStringAsFixed(2);
+    return '${product.codigo} - ${product.descricao}  R\$ $price';
   }
 
   @override
@@ -55,6 +82,8 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
         title: Text(
           widget.selectionEnabled ? 'Produtos' : 'Consulta de Produtos',
         ),
+        backgroundColor: _productColor,
+        foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: ListView(
@@ -72,16 +101,22 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                       labelText: 'Produto, codigo ou barras',
                       prefixIcon: Icons.search_outlined,
                       mode: OperationalKeyboardMode.numeric,
-                      color: const Color(0xFF4169E1),
+                      color: _productColor,
                       allowAlphaSwitch: true,
+                      clearOnOpen: true,
                       textInputAction: TextInputAction.search,
                       showListAction: true,
                       onConfirm: _search,
                       onList: _search,
+                      previewLoader: _previewProduct,
                     );
                     final button = widget.config.physicalKeyboardEnabled
                         ? FilledButton.icon(
                             onPressed: _search,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _productColor,
+                              foregroundColor: Colors.white,
+                            ),
                             icon: const Icon(Icons.search),
                             label: const Text('Pesquisar'),
                           )
@@ -236,7 +271,7 @@ class _ProductCodePill extends StatelessWidget {
       height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
+        color: _productColor,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Padding(
@@ -247,9 +282,7 @@ class _ProductCodePill extends StatelessWidget {
             code,
             maxLines: 1,
             textAlign: TextAlign.center,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
+            style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
           ),
         ),
       ),

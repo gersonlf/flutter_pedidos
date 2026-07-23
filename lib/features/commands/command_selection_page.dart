@@ -10,6 +10,9 @@ import '../employees/employee_repository.dart';
 import 'command_repository.dart';
 import 'command_selection.dart';
 
+const _mesaKeyboardColor = Color(0xFFE91E63);
+const _commandColor = Color(0xFF35B779);
+
 class CommandSelectionPage extends StatefulWidget {
   const CommandSelectionPage({
     super.key,
@@ -69,6 +72,38 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
     await _selectByCode(codigo);
   }
 
+  Future<void> _addCommand() async {
+    if (_consulting || _busy) {
+      return;
+    }
+
+    if (widget.config.physicalKeyboardEnabled) {
+      _commandController.clear();
+      _showMessage('Digite a comanda no campo de consulta.');
+      return;
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: 'informe a comanda',
+      initialValue: '',
+      mode: OperationalKeyboardMode.numeric,
+      color: _commandColor,
+      showListAction: true,
+    );
+
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return;
+    }
+
+    if (result.action == OperationalKeyboardAction.list) {
+      return;
+    }
+
+    _commandController.text = result.value;
+    await _consultTypedCommand();
+  }
+
   Future<void> _selectCommand(Comanda command) async {
     await _selectByCode(command.codigoComanda);
   }
@@ -112,7 +147,7 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
     final novaMesa = await _askNumber(
       title: 'informe a nova mesa',
       initialValue: command.codigoMesa > 0 ? command.codigoMesa.toString() : '',
-      color: const Color(0xFF35B779),
+      color: _mesaKeyboardColor,
       invalidMessage: 'Informe uma mesa valida',
       allowZero: true,
     );
@@ -164,7 +199,7 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
 
     final novaComanda = await _askNumber(
       title: 'informe a nova comanda',
-      color: const Color(0xFF35B779),
+      color: _commandColor,
       invalidMessage: 'Informe uma comanda valida',
     );
 
@@ -442,6 +477,8 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Comandas'),
+        backgroundColor: _commandColor,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             tooltip: 'Atualizar',
@@ -450,9 +487,21 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _consulting || _busy ? null : _addCommand,
+        backgroundColor: _commandColor,
+        foregroundColor: Colors.white,
+        icon: _consulting || _busy
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.add),
+        label: const Text('Adicionar'),
+      ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
             _CommandInputCard(
               controller: _commandController,
@@ -690,12 +739,12 @@ class _CommandInputCard extends StatelessWidget {
               labelText: 'Codigo da comanda',
               prefixIcon: Icons.receipt_long_outlined,
               mode: OperationalKeyboardMode.numeric,
-              color: const Color(0xFF35B779),
+              color: _commandColor,
+              clearOnOpen: true,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
               showListAction: true,
               onConfirm: onConsult,
-              onList: onConsult,
             ),
             if (useSystemKeyboard) ...[
               const SizedBox(height: 12),
@@ -747,70 +796,71 @@ class _CommandTile extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CommandCodePill(
-                code: command.codigoComanda.toString(),
-                locked: command.estaBloqueada,
+              _CommandThreeColumns(
+                columns: [
+                  _CommandInfoColumn(
+                    label: 'Comanda',
+                    value: command.codigoComanda.toString(),
+                    color: _commandColor,
+                    pill: true,
+                  ),
+                  _CommandInfoColumn(
+                    label: command.codigoTag > 0 ? 'Tag' : '',
+                    value: command.codigoTag > 0
+                        ? command.codigoTag.toString()
+                        : '',
+                    align: TextAlign.center,
+                  ),
+                  _CommandInfoColumn(
+                    label: command.codigoMesa > 0 ? 'Mesa' : '',
+                    value: command.codigoMesa > 0
+                        ? command.codigoMesa.toString()
+                        : '',
+                    align: TextAlign.right,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Comanda ${command.codigoComanda}',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: _badges
-                          .map((badge) => _CommandBadge(label: badge))
-                          .toList(),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              Text(
+                'Funcionario',
+                style: theme.textTheme.labelSmall?.copyWith(fontSize: 10),
+              ),
+              const SizedBox(height: 2),
+              Text(command.nomeFuncionario, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 10),
+              Text(
+                'Data/Hora',
+                style: theme.textTheme.labelSmall?.copyWith(fontSize: 10),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                command.dataHora,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFFFF3030),
+                  fontSize: 10,
                 ),
               ),
-              const SizedBox(width: 8),
-              if (command.estaBloqueada)
-                Icon(Icons.lock_outline, color: theme.colorScheme.error)
-              else
-                Icon(Icons.chevron_right, color: theme.colorScheme.primary),
-              PopupMenuButton<_CommandAction>(
-                enabled: enabled && !command.estaBloqueada,
-                onSelected: (action) {
-                  switch (action) {
-                    case _CommandAction.changeCommand:
-                      onChangeCommand();
-                    case _CommandAction.changeMesa:
-                      onChangeMesa();
-                    case _CommandAction.delete:
-                      onDelete();
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: _CommandAction.changeCommand,
-                    child: ListTile(
-                      leading: Icon(Icons.swap_horiz_outlined),
-                      title: Text('Trocar comanda'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'R\$ ${command.valorTotal.toStringAsFixed(2)}',
+                      style: theme.textTheme.titleSmall,
                     ),
                   ),
-                  PopupMenuItem(
-                    value: _CommandAction.changeMesa,
-                    child: ListTile(
-                      leading: Icon(Icons.table_restaurant_outlined),
-                      title: Text('Trocar mesa'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: _CommandAction.delete,
-                    child: ListTile(
-                      leading: Icon(Icons.delete_outline),
-                      title: Text('Excluir comanda'),
-                    ),
+                  if (command.estaBloqueada)
+                    Icon(Icons.lock_outline, color: theme.colorScheme.error)
+                  else
+                    Icon(Icons.chevron_right, color: theme.colorScheme.primary),
+                  _CommandActionMenu(
+                    enabled: enabled && !command.estaBloqueada,
+                    onChangeCommand: onChangeCommand,
+                    onChangeMesa: onChangeMesa,
+                    onDelete: onDelete,
                   ),
                 ],
               ),
@@ -820,46 +870,130 @@ class _CommandTile extends StatelessWidget {
       ),
     );
   }
-
-  List<String> get _badges {
-    return <String>[
-      if (command.codigoMesa > 0) 'Mesa ${command.codigoMesa}',
-      if (command.codigoTag > 0) 'Tag ${command.codigoTag}',
-      if (command.nomeFuncionario.trim().isNotEmpty) command.nomeFuncionario,
-      'R\$ ${command.valorTotal.toStringAsFixed(2)}',
-    ];
-  }
 }
 
 enum _CommandAction { changeCommand, changeMesa, delete }
 
-class _CommandBadge extends StatelessWidget {
-  const _CommandBadge({required this.label});
+class _CommandActionMenu extends StatelessWidget {
+  const _CommandActionMenu({
+    required this.enabled,
+    required this.onChangeCommand,
+    required this.onChangeMesa,
+    required this.onDelete,
+  });
+
+  final bool enabled;
+  final VoidCallback onChangeCommand;
+  final VoidCallback onChangeMesa;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_CommandAction>(
+      enabled: enabled,
+      onSelected: (action) {
+        switch (action) {
+          case _CommandAction.changeCommand:
+            onChangeCommand();
+          case _CommandAction.changeMesa:
+            onChangeMesa();
+          case _CommandAction.delete:
+            onDelete();
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _CommandAction.changeCommand,
+          child: ListTile(
+            leading: Icon(Icons.swap_horiz_outlined),
+            title: Text('Trocar comanda'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _CommandAction.changeMesa,
+          child: ListTile(
+            leading: Icon(Icons.table_restaurant_outlined),
+            title: Text('Trocar mesa'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _CommandAction.delete,
+          child: ListTile(
+            leading: Icon(Icons.delete_outline),
+            title: Text('Excluir comanda'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CommandThreeColumns extends StatelessWidget {
+  const _CommandThreeColumns({required this.columns});
+
+  final List<_CommandInfoColumn> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [for (final column in columns) Expanded(child: column)],
+    );
+  }
+}
+
+class _CommandInfoColumn extends StatelessWidget {
+  const _CommandInfoColumn({
+    required this.label,
+    required this.value,
+    this.align = TextAlign.left,
+    this.color = const Color(0xFF27408B),
+    this.pill = false,
+  });
 
   final String label;
+  final String value;
+  final TextAlign align;
+  final Color color;
+  final bool pill;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(label, style: theme.textTheme.bodySmall),
-      ),
+    return Column(
+      crossAxisAlignment: align == TextAlign.right
+          ? CrossAxisAlignment.end
+          : align == TextAlign.center
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          textAlign: align,
+          style: theme.textTheme.labelSmall?.copyWith(fontSize: 10),
+        ),
+        const SizedBox(height: 2),
+        if (pill)
+          _CommandCodePill(code: value, color: color)
+        else
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: align,
+            style: theme.textTheme.titleMedium?.copyWith(color: color),
+          ),
+      ],
     );
   }
 }
 
 class _CommandCodePill extends StatelessWidget {
-  const _CommandCodePill({required this.code, required this.locked});
+  const _CommandCodePill({required this.code, required this.color});
 
   final String code;
-  final bool locked;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -870,9 +1004,7 @@ class _CommandCodePill extends StatelessWidget {
       height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: locked
-            ? theme.colorScheme.errorContainer
-            : theme.colorScheme.primaryContainer,
+        color: color,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Padding(
@@ -883,11 +1015,7 @@ class _CommandCodePill extends StatelessWidget {
             code,
             maxLines: 1,
             textAlign: TextAlign.center,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: locked
-                  ? theme.colorScheme.onErrorContainer
-                  : theme.colorScheme.onPrimaryContainer,
-            ),
+            style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
           ),
         ),
       ),

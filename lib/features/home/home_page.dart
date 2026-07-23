@@ -15,6 +15,13 @@ import '../kitchen/kitchen_page.dart';
 import '../products/product_search_page.dart';
 import '../settings/settings_page.dart';
 
+const _mesaKeyboardColor = Color(0xFFE91E63);
+const _tagKeyboardColor = Color(0xFF7B1FA2);
+const _employeeColor = Color(0xFFFF9A7B);
+const _commandColor = Color(0xFF35B779);
+const _itemColor = Color(0xFF4169E1);
+const _productConsultationColor = Color(0xFFE53935);
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.configStore});
 
@@ -187,10 +194,20 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    command = await _applyCommandRequirements(command, config, companyConfig);
-    if (command == null || !mounted) {
+    final requirements = await _applyCommandRequirements(
+      command,
+      config,
+      companyConfig,
+    );
+    if (requirements == null || !mounted) {
       return;
     }
+    if (requirements.backToCommands) {
+      await _selectCommand(config, companyConfig);
+      return;
+    }
+
+    command = requirements.command;
 
     setState(() {
       _selectedCommand = command;
@@ -251,7 +268,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<CommandSelection?> _applyCommandRequirements(
+  Future<_CommandRequirementsResult?> _applyCommandRequirements(
     CommandSelection command,
     AppConfig config,
     EmpresaConfig companyConfig,
@@ -259,43 +276,49 @@ class _HomePageState extends State<HomePage> {
     var resolved = command;
 
     if (companyConfig.controlaMesa && resolved.codigoMesa <= 0) {
-      final mesa = await _askRequiredNumber(
+      final mesaResult = await _askRequiredNumber(
         config: config,
         title: 'Mesa da comanda',
         keyboardTitle: 'informe a mesa',
         label: 'Mesa',
         icon: Icons.table_restaurant_outlined,
-        color: const Color(0xFF35B779),
+        color: _mesaKeyboardColor,
       );
 
-      if (mesa == null) {
+      if (mesaResult == null) {
         return null;
       }
+      if (mesaResult.backToCommands) {
+        return const _CommandRequirementsResult.backToCommands();
+      }
 
-      resolved = resolved.copyWith(codigoMesa: mesa);
+      resolved = resolved.copyWith(codigoMesa: mesaResult.value);
     }
 
     if (companyConfig.controlaTag && resolved.codigoTag <= 0) {
-      final tag = await _askRequiredNumber(
+      final tagResult = await _askRequiredNumber(
         config: config,
         title: 'Tag da comanda',
         keyboardTitle: 'informe a tag',
         label: 'Tag',
         icon: Icons.sell_outlined,
-        color: const Color(0xFF35B779),
+        color: _tagKeyboardColor,
       );
 
-      if (tag == null) {
+      if (tagResult == null) {
         return null;
       }
+      if (tagResult.backToCommands) {
+        return const _CommandRequirementsResult.backToCommands();
+      }
 
-      resolved = resolved.copyWith(codigoTag: tag);
+      resolved = resolved.copyWith(codigoTag: tagResult.value);
     }
 
-    return resolved;
+    return _CommandRequirementsResult.completed(resolved);
   }
 
-  Future<int?> _askRequiredNumber({
+  Future<_RequiredNumberResult?> _askRequiredNumber({
     required AppConfig config,
     required String title,
     required String keyboardTitle,
@@ -304,11 +327,12 @@ class _HomePageState extends State<HomePage> {
     required Color color,
   }) async {
     if (config.physicalKeyboardEnabled) {
-      return showDialog<int>(
+      final value = await showDialog<int>(
         context: context,
         builder: (_) =>
             _RequiredNumberDialog(title: title, label: label, icon: icon),
       );
+      return value == null ? null : _RequiredNumberResult.value(value);
     }
 
     final result = await showOperationalKeyboard(
@@ -318,8 +342,11 @@ class _HomePageState extends State<HomePage> {
       mode: OperationalKeyboardMode.numeric,
       color: color,
     );
-    if (result == null || result.action == OperationalKeyboardAction.back) {
+    if (result == null) {
       return null;
+    }
+    if (result.action == OperationalKeyboardAction.back) {
+      return const _RequiredNumberResult.backToCommands();
     }
 
     final value = int.tryParse(result.value);
@@ -332,7 +359,7 @@ class _HomePageState extends State<HomePage> {
       return null;
     }
 
-    return value;
+    return _RequiredNumberResult.value(value);
   }
 
   @override
@@ -474,24 +501,20 @@ class _CommandPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Card(
-      color: theme.colorScheme.tertiaryContainer,
-      child: ListTile(
-        leading: Icon(
-          command == null
-              ? Icons.receipt_long_outlined
-              : Icons.assignment_turned_in_outlined,
-          color: theme.colorScheme.onTertiaryContainer,
-        ),
-        title: Text(
-          command == null ? 'Consultar comandas' : 'Selecionar outra comanda',
-        ),
-        trailing: _HomeActionButton(
+      color: _commandColor,
+      child: _HomeStatusCard(
+        icon: command == null
+            ? Icons.receipt_long_outlined
+            : Icons.assignment_turned_in_outlined,
+        title: command == null
+            ? 'Consultar comandas'
+            : 'Selecionar outra comanda',
+        action: _HomeActionButton(
           onPressed: enabled ? onSelectCommand : null,
           icon: const Icon(Icons.search_outlined),
           label: 'Selecionar',
+          color: _commandColor,
         ),
       ),
     );
@@ -511,27 +534,21 @@ class _ItemsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Card(
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: ListTile(
-        leading: Icon(
-          Icons.format_list_bulleted_outlined,
-          color: theme.colorScheme.primary,
-        ),
-        title: Text(command?.resumo ?? 'Itens'),
-        subtitle: Text(
-          command == null
-              ? 'Selecione uma comanda antes de lancar itens'
-              : command!.estaBloqueada
-              ? 'Comanda bloqueada'
-              : 'Abrir itens da comanda selecionada',
-        ),
-        trailing: _HomeActionButton(
+      color: _itemColor,
+      child: _HomeStatusCard(
+        icon: Icons.format_list_bulleted_outlined,
+        title: command?.resumo ?? 'Itens',
+        subtitle: command == null
+            ? 'Selecione uma comanda antes de lancar itens'
+            : command!.estaBloqueada
+            ? 'Comanda bloqueada'
+            : 'Abrir itens da comanda selecionada',
+        action: _HomeActionButton(
           onPressed: enabled ? onOpenItems : null,
           icon: const Icon(Icons.open_in_new_outlined),
           label: 'Abrir',
+          color: _itemColor,
         ),
       ),
     );
@@ -549,20 +566,16 @@ class _ProductConsultationPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Card(
-      color: theme.colorScheme.errorContainer,
-      child: ListTile(
-        leading: Icon(
-          Icons.inventory_2_outlined,
-          color: theme.colorScheme.onErrorContainer,
-        ),
-        title: const Text('Pesquisar preco, codigo e dados do produto'),
-        trailing: FilledButton.icon(
+      color: _productConsultationColor,
+      child: _HomeStatusCard(
+        icon: Icons.inventory_2_outlined,
+        title: 'Pesquisar preco, codigo e dados do produto',
+        action: _HomeActionButton(
           onPressed: enabled ? onOpenProductConsultation : null,
           icon: const Icon(Icons.search_outlined),
-          label: const Text('Consultar'),
+          label: 'Consultar',
+          color: _productConsultationColor,
         ),
       ),
     );
@@ -582,24 +595,19 @@ class _EmployeePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Card(
-      color: theme.colorScheme.primaryContainer,
-      child: ListTile(
-        leading: Icon(
-          employee == null ? Icons.badge_outlined : Icons.verified_user,
-          color: theme.colorScheme.onPrimaryContainer,
-        ),
-        title: Text(
-          employee?.nome ??
-              'Selecione um funcionario para iniciar o atendimento',
-        ),
-        subtitle: employee == null ? null : Text('Codigo ${employee!.codigo}'),
-        trailing: _HomeActionButton(
+      color: _employeeColor,
+      child: _HomeStatusCard(
+        icon: employee == null ? Icons.badge_outlined : Icons.verified_user,
+        title:
+            employee?.nome ??
+            'Selecione um funcionario para iniciar o atendimento',
+        subtitle: employee == null ? null : 'Codigo ${employee!.codigo}',
+        action: _HomeActionButton(
           onPressed: enabled ? onSelectEmployee : null,
           icon: const Icon(Icons.person_search_outlined),
           label: 'Selecionar',
+          color: _employeeColor,
         ),
       ),
     );
@@ -679,29 +687,80 @@ class _KitchenPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final enabled = configured && hasEmployee && kitchenEnabled;
 
     return Card(
-      color: theme.colorScheme.secondaryContainer,
-      child: ListTile(
-        leading: Icon(
-          Icons.room_service_outlined,
-          color: theme.colorScheme.onSecondaryContainer,
-        ),
-        title: Text(
-          !configured
-              ? 'Configure o servidor antes de acessar'
-              : !hasEmployee
-              ? 'Selecione um funcionario primeiro'
-              : kitchenEnabled
-              ? 'Pedidos prontos e entregues'
-              : 'Modulo desabilitado',
-        ),
-        trailing: _HomeActionButton(
+      color: const Color(0xFF6C5CE7),
+      child: _HomeStatusCard(
+        icon: Icons.room_service_outlined,
+        title: !configured
+            ? 'Configure o servidor antes de acessar'
+            : !hasEmployee
+            ? 'Selecione um funcionario primeiro'
+            : kitchenEnabled
+            ? 'Pedidos prontos e entregues'
+            : 'Modulo desabilitado',
+        action: _HomeActionButton(
           onPressed: enabled ? onOpenKitchen : null,
           icon: const Icon(Icons.open_in_new_outlined),
           label: 'Abrir',
+          color: const Color(0xFF6C5CE7),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeStatusCard extends StatelessWidget {
+  const _HomeStatusCard({
+    required this.icon,
+    required this.title,
+    required this.action,
+    this.subtitle,
+  });
+
+  static const double minHeight = 92;
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget action;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: minHeight),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            action,
+          ],
         ),
       ),
     );
@@ -713,6 +772,7 @@ class _HomeActionButton extends StatelessWidget {
     required this.onPressed,
     required this.icon,
     required this.label,
+    required this.color,
   });
 
   static const double width = 142;
@@ -720,17 +780,24 @@ class _HomeActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget icon;
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: width,
-      child: FilledButton.icon(
+      child: FilledButton.tonalIcon(
         onPressed: onPressed,
         icon: icon,
         label: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(label, maxLines: 1),
+        ),
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: color,
+          disabledBackgroundColor: Colors.white54,
+          disabledForegroundColor: color.withAlpha(120),
         ),
       ),
     );
@@ -863,4 +930,27 @@ class _HomeData {
 
   final AppConfig config;
   final EmpresaConfig companyConfig;
+}
+
+class _CommandRequirementsResult {
+  const _CommandRequirementsResult.completed(this.command)
+    : backToCommands = false;
+
+  const _CommandRequirementsResult.backToCommands()
+    : command = null,
+      backToCommands = true;
+
+  final CommandSelection? command;
+  final bool backToCommands;
+}
+
+class _RequiredNumberResult {
+  const _RequiredNumberResult.value(this.value) : backToCommands = false;
+
+  const _RequiredNumberResult.backToCommands()
+    : value = null,
+      backToCommands = true;
+
+  final int? value;
+  final bool backToCommands;
 }

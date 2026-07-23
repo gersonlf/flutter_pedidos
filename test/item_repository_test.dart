@@ -69,9 +69,44 @@ void main() {
 
     expect(client.lastBody['codigo_tag'], '123');
   });
+
+  test('fetchItems parses Delphi list fields', () async {
+    final client = _RecordingClient(
+      responseBody: jsonEncode([
+        {
+          'codigo_venda': '1',
+          'codigo_comanda': '10',
+          'item_venda': '2',
+          'codigo_produto': '100',
+          'codigo_reduzido': '5',
+          'codigo_barra': '7890000000001',
+          'descricao_produto': 'COCA COLA',
+          'qtde_produto': '1.000',
+          'valor_unitario': '5.50',
+          'valor_total': '5.50',
+          'observacao_item': 'GELO',
+          'nome_funcionario': 'ADRIANA',
+          'data_hora': '23/07/2026 10:15:30',
+        },
+      ]),
+    );
+    final repository = ItemRepository(config: config, client: client);
+
+    final items = await repository.fetchItems(10);
+
+    expect(items.single.codigoReduzido, 5);
+    expect(items.single.codigoBarra, '7890000000001');
+    expect(items.single.nomeFuncionario, 'ADRIANA');
+    expect(items.single.dataHora, '23/07/2026 10:15:30');
+  });
 }
 
 class _RecordingClient extends http.BaseClient {
+  _RecordingClient({
+    this.responseBody = '[{"codigoVenda":"1","itemVenda":"1"}]',
+  });
+
+  final String responseBody;
   Map<String, dynamic> lastBody = const {};
 
   @override
@@ -81,7 +116,7 @@ class _RecordingClient extends http.BaseClient {
     }
 
     return http.StreamedResponse(
-      Stream.value(utf8.encode('[{"codigoVenda":"1","itemVenda":"1"}]')),
+      Stream.value(utf8.encode(responseBody)),
       200,
       headers: const {'content-type': 'application/json; charset=utf-8'},
     );

@@ -59,3 +59,23 @@ flutter build web
 flutter build windows
 flutter build apk --debug
 ```
+
+## Publicar PWA local de teste
+
+Para compilar e copiar a versao Web/PWA para o Apache local:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\deploy_pwa.ps1
+```
+
+O script publica em:
+
+```text
+C:\httpd-2.4.46-win64-VS16\htdocs\pedidos-app
+```
+
+URL de teste:
+
+```text
+http://192.168.3.10/pedidos-app/
+```

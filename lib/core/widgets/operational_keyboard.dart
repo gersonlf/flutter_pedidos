@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 enum OperationalKeyboardMode { numeric, alpha }
 
 enum OperationalKeyboardAction { confirm, list, back }
+
+typedef OperationalKeyboardPreviewLoader =
+    Future<String?> Function(String value);
 
 class OperationalKeyboardResult {
   const OperationalKeyboardResult({required this.action, required this.value});
@@ -23,6 +28,8 @@ Future<OperationalKeyboardResult?> showOperationalKeyboard({
   bool showListAction = false,
   bool allowAlphaSwitch = false,
   bool allowObservationSwitch = false,
+  bool replaceInitialValueOnFirstInput = false,
+  OperationalKeyboardPreviewLoader? previewLoader,
 }) {
   return Navigator.of(context).push<OperationalKeyboardResult>(
     MaterialPageRoute(
@@ -37,6 +44,8 @@ Future<OperationalKeyboardResult?> showOperationalKeyboard({
         showListAction: showListAction,
         allowAlphaSwitch: allowAlphaSwitch,
         allowObservationSwitch: allowObservationSwitch,
+        replaceInitialValueOnFirstInput: replaceInitialValueOnFirstInput,
+        previewLoader: previewLoader,
       ),
     ),
   );
@@ -58,12 +67,14 @@ class OperationalKeyboardTextField extends StatelessWidget {
     this.showListAction = false,
     this.allowAlphaSwitch = false,
     this.allowObservationSwitch = false,
+    this.clearOnOpen = false,
     this.textInputAction = TextInputAction.done,
     this.keyboardType,
     this.minLines,
     this.maxLines = 1,
     this.onConfirm,
     this.onList,
+    this.previewLoader,
   });
 
   final TextEditingController controller;
@@ -79,22 +90,29 @@ class OperationalKeyboardTextField extends StatelessWidget {
   final bool showListAction;
   final bool allowAlphaSwitch;
   final bool allowObservationSwitch;
+  final bool clearOnOpen;
   final TextInputAction textInputAction;
   final TextInputType? keyboardType;
   final int? minLines;
   final int maxLines;
   final VoidCallback? onConfirm;
   final VoidCallback? onList;
+  final OperationalKeyboardPreviewLoader? previewLoader;
 
   Future<void> _openKeyboard(BuildContext context) async {
     if (!enabled) {
       return;
     }
 
+    final initialValue = clearOnOpen ? '' : controller.text;
+    if (clearOnOpen && controller.text.isNotEmpty) {
+      controller.clear();
+    }
+
     final result = await showOperationalKeyboard(
       context: context,
       title: title,
-      initialValue: controller.text,
+      initialValue: initialValue,
       mode: mode,
       color: color,
       allowDecimal: allowDecimal,
@@ -102,6 +120,7 @@ class OperationalKeyboardTextField extends StatelessWidget {
       showListAction: showListAction,
       allowAlphaSwitch: allowAlphaSwitch,
       allowObservationSwitch: allowObservationSwitch,
+      previewLoader: previewLoader,
     );
 
     if (result == null) {
@@ -173,6 +192,8 @@ class OperationalKeyboardPage extends StatefulWidget {
     required this.showListAction,
     required this.allowAlphaSwitch,
     required this.allowObservationSwitch,
+    required this.replaceInitialValueOnFirstInput,
+    required this.previewLoader,
   });
 
   final String title;
@@ -184,6 +205,8 @@ class OperationalKeyboardPage extends StatefulWidget {
   final bool showListAction;
   final bool allowAlphaSwitch;
   final bool allowObservationSwitch;
+  final bool replaceInitialValueOnFirstInput;
+  final OperationalKeyboardPreviewLoader? previewLoader;
 
   @override
   State<OperationalKeyboardPage> createState() =>
@@ -194,6 +217,11 @@ class _OperationalKeyboardPageState extends State<OperationalKeyboardPage> {
   late String _value;
   late OperationalKeyboardMode _mode;
   late String _title;
+  late bool _replaceOnNextInput;
+  Timer? _previewTimer;
+  int _previewRequest = 0;
+  bool _loadingPreview = false;
+  String? _preview;
 
   @override
   void initState() {
@@ -201,6 +229,16 @@ class _OperationalKeyboardPageState extends State<OperationalKeyboardPage> {
     _value = widget.initialValue;
     _mode = widget.mode;
     _title = widget.title;
+    _replaceOnNextInput =
+        widget.replaceInitialValueOnFirstInput &&
+        widget.initialValue.isNotEmpty;
+    _schedulePreview();
+  }
+
+  @override
+  void dispose() {
+    _previewTimer?.cancel();
+    super.dispose();
   }
 
   void _append(String key) {
@@ -231,13 +269,23 @@ class _OperationalKeyboardPageState extends State<OperationalKeyboardPage> {
     }
 
     setState(() {
+      if (_replaceOnNextInput) {
+        _value = '';
+        _replaceOnNextInput = false;
+      }
       _value += key;
     });
+    _schedulePreview();
   }
 
   void _clear() {
+    _previewRequest++;
+    _previewTimer?.cancel();
     setState(() {
       _value = '';
+      _replaceOnNextInput = false;
+      _preview = null;
+      _loadingPreview = false;
     });
   }
 
@@ -247,8 +295,14 @@ class _OperationalKeyboardPageState extends State<OperationalKeyboardPage> {
     }
 
     setState(() {
+      if (_replaceOnNextInput) {
+        _value = '';
+        _replaceOnNextInput = false;
+        return;
+      }
       _value = _value.substring(0, _value.length - 1);
     });
+    _schedulePreview();
   }
 
   void _finish(OperationalKeyboardAction action) {
@@ -293,6 +347,59 @@ class _OperationalKeyboardPageState extends State<OperationalKeyboardPage> {
     return KeyEventResult.handled;
   }
 
+  void _schedulePreview() {
+    final loader = widget.previewLoader;
+    if (loader == null) {
+      return;
+    }
+
+    _previewTimer?.cancel();
+    final value = _value.trim();
+    if (value.isEmpty) {
+      _previewRequest++;
+      setState(() {
+        _preview = null;
+        _loadingPreview = false;
+      });
+      return;
+    }
+
+    _previewTimer = Timer(const Duration(milliseconds: 220), () {
+      _loadPreview(value, loader);
+    });
+  }
+
+  Future<void> _loadPreview(
+    String value,
+    OperationalKeyboardPreviewLoader loader,
+  ) async {
+    final request = ++_previewRequest;
+    setState(() {
+      _loadingPreview = true;
+    });
+
+    try {
+      final preview = await loader(value);
+      if (!mounted || request != _previewRequest) {
+        return;
+      }
+
+      setState(() {
+        _preview = preview;
+        _loadingPreview = false;
+      });
+    } catch (_) {
+      if (!mounted || request != _previewRequest) {
+        return;
+      }
+
+      setState(() {
+        _preview = null;
+        _loadingPreview = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -312,18 +419,34 @@ class _OperationalKeyboardPageState extends State<OperationalKeyboardPage> {
                 SizedBox(
                   height: 52,
                   child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        widget.obscure ? '*' * _value.length : _value,
-                        maxLines: 1,
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: _replaceOnNextInput
+                            ? theme.colorScheme.primaryContainer
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            widget.obscure ? '*' * _value.length : _value,
+                            maxLines: 1,
+                            style: theme.textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                ),
+                _KeyboardPreview(
+                  loading: _loadingPreview,
+                  preview: _preview,
+                  visible: widget.previewLoader != null,
                 ),
                 const SizedBox(height: 18),
                 Expanded(
@@ -390,6 +513,55 @@ class _KeyboardHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _KeyboardPreview extends StatelessWidget {
+  const _KeyboardPreview({
+    required this.loading,
+    required this.preview,
+    required this.visible,
+  });
+
+  final bool loading;
+  final String? preview;
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!visible) {
+      return const SizedBox(height: 0);
+    }
+
+    final theme = Theme.of(context);
+    final text = loading ? 'consultando...' : preview ?? '';
+
+    return SizedBox(
+      height: 42,
+      child: Center(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 120),
+          child: text.isEmpty
+              ? const SizedBox.shrink()
+              : Padding(
+                  key: ValueKey(text),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+      ),
     );
   }
 }
@@ -539,7 +711,7 @@ class _ActionRows extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _KeyboardKey(
-                    label: 'listar',
+                    label: showListAction ? 'listar' : '',
                     color: showListAction
                         ? const Color(0xFF2AAEAA)
                         : const Color(0xFFD6D6D6),

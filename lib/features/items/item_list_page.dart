@@ -8,11 +8,12 @@ import '../../core/models/produto.dart';
 import '../../core/widgets/operational_keyboard.dart';
 import '../commands/command_selection.dart';
 import '../employees/employee_repository.dart';
-import '../kitchen/kitchen_repository.dart';
 import '../products/product_options_page.dart';
 import '../products/product_repository.dart';
 import '../products/product_search_page.dart';
 import 'item_repository.dart';
+
+const _itemColor = Color(0xFF4169E1);
 
 class ItemListPage extends StatefulWidget {
   const ItemListPage({
@@ -60,24 +61,31 @@ class _ItemListPageState extends State<ItemListPage> {
       return;
     }
 
-    final product = await Navigator.of(context).push<Produto>(
-      MaterialPageRoute(
-        builder: (_) => ProductSearchPage(config: widget.config),
-      ),
-    );
+    Produto? product;
+    if (widget.config.physicalKeyboardEnabled) {
+      final navigator = Navigator.of(context);
+      product = await navigator.push<Produto>(
+        MaterialPageRoute(
+          builder: (_) => ProductSearchPage(config: widget.config),
+        ),
+      );
+    } else {
+      product = await _askProduct();
+    }
 
     if (product == null || !mounted) {
       return;
     }
+    final selectedProduct = product;
 
     _ItemDraft? draft;
     if (widget.config.physicalKeyboardEnabled) {
       draft = await showDialog<_ItemDraft>(
         context: context,
-        builder: (_) => _ItemDraftDialog(product: product),
+        builder: (_) => _ItemDraftDialog(product: selectedProduct),
       );
     } else {
-      draft = await _askItemDraft(product);
+      draft = await _askItemDraft(selectedProduct);
     }
 
     if (draft == null || draft.quantity <= 0 || !mounted) {
@@ -94,9 +102,11 @@ class _ItemListPageState extends State<ItemListPage> {
     try {
       final productRepository = ProductRepository(config: widget.config);
       acompanhamentos = await productRepository.fetchAcompanhamentos(
-        product.codigo,
+        selectedProduct.codigo,
       );
-      adicionais = await productRepository.fetchAdicionais(product.codigo);
+      adicionais = await productRepository.fetchAdicionais(
+        selectedProduct.codigo,
+      );
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -159,7 +169,7 @@ class _ItemListPageState extends State<ItemListPage> {
       await _repository.addItem(
         employee: widget.employee,
         command: widget.command,
-        product: product,
+        product: selectedProduct,
         quantity: draft.quantity,
         observation: draft.observation,
       );
@@ -168,9 +178,9 @@ class _ItemListPageState extends State<ItemListPage> {
         return;
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${product.descricao} incluido')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${selectedProduct.descricao} incluido')),
+      );
       _reload();
     } catch (error) {
       if (mounted) {
@@ -452,45 +462,6 @@ class _ItemListPageState extends State<ItemListPage> {
     }
   }
 
-  Future<void> _sendToKitchen() async {
-    if (_busy || widget.companyConfig?.controlaCozinha == false) {
-      return;
-    }
-
-    setState(() {
-      _busy = true;
-    });
-
-    try {
-      final repository = KitchenRepository(config: widget.config);
-      await repository.sendCommandToKitchen(
-        employee: widget.employee,
-        codigoComanda: widget.command.codigoComanda,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Comanda enviada')));
-      _reload();
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-        });
-      }
-    }
-  }
-
   Future<bool?> _confirmDelete(ItemComanda item) {
     return showDialog<bool>(
       context: context,
@@ -532,8 +503,9 @@ class _ItemListPageState extends State<ItemListPage> {
       title: 'informe a quantidade',
       initialValue: '1',
       mode: OperationalKeyboardMode.numeric,
-      color: const Color(0xFF35B779),
+      color: const Color(0xFFE53935),
       allowDecimal: product.permiteQuantidadeDecimal,
+      replaceInitialValueOnFirstInput: true,
     );
 
     if (quantityResult == null ||
@@ -559,6 +531,72 @@ class _ItemListPageState extends State<ItemListPage> {
     }
 
     return _ItemDraft(quantity: quantity, observation: observation ?? '');
+  }
+
+  Future<Produto?> _askProduct() async {
+    final productRepository = ProductRepository(config: widget.config);
+    Future<String?> previewProduct(String value) async {
+      final product = await _findProduct(
+        productRepository,
+        value,
+        silent: true,
+      );
+      if (product == null) {
+        return null;
+      }
+
+      final price = product.valorUnitario.toStringAsFixed(2);
+      return '${product.codigo} - ${product.descricao}  R\$ $price';
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: 'informe o produto',
+      initialValue: '',
+      mode: OperationalKeyboardMode.numeric,
+      color: _itemColor,
+      allowAlphaSwitch: true,
+      showListAction: true,
+      previewLoader: previewProduct,
+    );
+
+    if (result == null ||
+        result.action == OperationalKeyboardAction.back ||
+        result.action == OperationalKeyboardAction.list) {
+      return null;
+    }
+
+    final product = await _findProduct(productRepository, result.value);
+    if (product == null) {
+      _showMessage('Produto nao encontrado');
+      return null;
+    }
+
+    return product;
+  }
+
+  Future<Produto?> _findProduct(
+    ProductRepository repository,
+    String value, {
+    bool silent = false,
+  }) async {
+    final query = value.trim();
+    if (query.isEmpty) {
+      return null;
+    }
+
+    try {
+      final products = await repository.searchProducts(
+        query,
+        mode: ProductSearchMode.item,
+      );
+      return products.isEmpty ? null : products.first;
+    } catch (error) {
+      if (mounted && !silent) {
+        _showMessage(error.toString());
+      }
+      return null;
+    }
   }
 
   Future<int?> _askNumber({
@@ -656,15 +694,10 @@ class _ItemListPageState extends State<ItemListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Itens ${widget.command.codigoComanda}'),
+        title: const Text('Itens'),
+        backgroundColor: _itemColor,
+        foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            tooltip: 'Enviar para cozinha',
-            onPressed: _busy || widget.companyConfig?.controlaCozinha == false
-                ? null
-                : _sendToKitchen,
-            icon: const Icon(Icons.restaurant_outlined),
-          ),
           IconButton(
             tooltip: 'Atualizar',
             onPressed: _reload,
@@ -676,6 +709,8 @@ class _ItemListPageState extends State<ItemListPage> {
         onPressed: widget.command.estaBloqueada || _adding || _busy
             ? null
             : _addItem,
+        backgroundColor: _itemColor,
+        foregroundColor: Colors.white,
         icon: _adding || _busy
             ? const SizedBox.square(
                 dimension: 18,
@@ -1137,6 +1172,7 @@ class _ItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final barcode = item.codigoBarra == '0000000000000' ? '' : item.codigoBarra;
 
     return Card(
       child: Padding(
@@ -1144,102 +1180,102 @@ class _ItemTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ItemCodePill(code: item.itemVenda.toString()),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    item.descricaoProduto,
-                    style: theme.textTheme.titleMedium,
-                  ),
+            _ItemThreeColumns(
+              columns: [
+                _ItemInfoColumn(
+                  label: 'Qtde',
+                  value: item.quantidade.toStringAsFixed(3),
                 ),
-                const SizedBox(width: 8),
-                PopupMenuButton<_ItemAction>(
-                  enabled: enabled,
-                  onSelected: (action) {
-                    switch (action) {
-                      case _ItemAction.changeCommand:
-                        onChangeCommand();
-                      case _ItemAction.observation:
-                        onChangeObservation();
-                      case _ItemAction.delete:
-                        onDelete();
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: _ItemAction.changeCommand,
-                      child: ListTile(
-                        leading: Icon(Icons.swap_horiz_outlined),
-                        title: Text('Trocar comanda'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: _ItemAction.observation,
-                      child: ListTile(
-                        leading: Icon(Icons.notes_outlined),
-                        title: Text('Alterar observacao'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: _ItemAction.delete,
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline),
-                        title: Text('Excluir item'),
-                      ),
-                    ),
-                  ],
+                _ItemInfoColumn(
+                  label: 'Unitario R\$',
+                  value: item.valorUnitario.toStringAsFixed(2),
+                  align: TextAlign.center,
+                ),
+                _ItemInfoColumn(
+                  label: 'Total R\$',
+                  value: item.valorTotal.toStringAsFixed(2),
+                  align: TextAlign.right,
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _ItemBadge(
-                  label:
-                      '${item.quantidade.toStringAsFixed(3)} x R\$ ${item.valorUnitario.toStringAsFixed(2)}',
+            const SizedBox(height: 14),
+            _ItemThreeColumns(
+              columns: [
+                _ItemInfoColumn(
+                  label: 'Produto',
+                  value: item.codigoProduto.toString(),
+                  color: _itemColor,
+                  pill: true,
                 ),
-                _ItemBadge(
-                  label: 'Total R\$ ${item.valorTotal.toStringAsFixed(2)}',
-                  highlighted: true,
+                _ItemInfoColumn(
+                  label: 'Reduzido',
+                  value: item.codigoReduzido > 0
+                      ? item.codigoReduzido.toString()
+                      : '',
+                  align: TextAlign.center,
+                ),
+                _ItemInfoColumn(
+                  label: 'Barra',
+                  value: barcode,
+                  align: TextAlign.right,
                 ),
               ],
             ),
+            const SizedBox(height: 14),
+            _ItemInfoBlock(label: 'Descricao', value: item.descricaoProduto),
             if (item.observacao.isNotEmpty) ...[
               const SizedBox(height: 10),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.notes_outlined,
-                        size: 18,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          item.observacao,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              _ItemInfoBlock(
+                label: 'Observacao',
+                value: item.observacao,
+                valueStyle: theme.textTheme.bodySmall,
               ),
             ],
+            if (item.nomeFuncionario.isNotEmpty ||
+                item.dataHora.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (item.nomeFuncionario.isNotEmpty)
+                          _ItemInfoBlock(
+                            label: 'Funcionario',
+                            value: item.nomeFuncionario,
+                            valueStyle: theme.textTheme.bodySmall,
+                          ),
+                        if (item.dataHora.isNotEmpty)
+                          Text(
+                            item.dataHora,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: const Color(0xFFFF3030),
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _ItemActionMenu(
+                    enabled: enabled,
+                    onChangeCommand: onChangeCommand,
+                    onChangeObservation: onChangeObservation,
+                    onDelete: onDelete,
+                  ),
+                ],
+              ),
+            ] else
+              Align(
+                alignment: Alignment.centerRight,
+                child: _ItemActionMenu(
+                  enabled: enabled,
+                  onChangeCommand: onChangeCommand,
+                  onChangeObservation: onChangeObservation,
+                  onDelete: onDelete,
+                ),
+              ),
           ],
         ),
       ),
@@ -1249,35 +1285,126 @@ class _ItemTile extends StatelessWidget {
 
 enum _ItemAction { changeCommand, observation, delete }
 
-class _ItemBadge extends StatelessWidget {
-  const _ItemBadge({required this.label, this.highlighted = false});
+class _ItemActionMenu extends StatelessWidget {
+  const _ItemActionMenu({
+    required this.enabled,
+    required this.onChangeCommand,
+    required this.onChangeObservation,
+    required this.onDelete,
+  });
+
+  final bool enabled;
+  final VoidCallback onChangeCommand;
+  final VoidCallback onChangeObservation;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_ItemAction>(
+      enabled: enabled,
+      onSelected: (action) {
+        switch (action) {
+          case _ItemAction.changeCommand:
+            onChangeCommand();
+          case _ItemAction.observation:
+            onChangeObservation();
+          case _ItemAction.delete:
+            onDelete();
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _ItemAction.changeCommand,
+          child: ListTile(
+            leading: Icon(Icons.swap_horiz_outlined),
+            title: Text('Trocar comanda'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _ItemAction.observation,
+          child: ListTile(
+            leading: Icon(Icons.notes_outlined),
+            title: Text('Alterar observacao'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _ItemAction.delete,
+          child: ListTile(
+            leading: Icon(Icons.delete_outline),
+            title: Text('Excluir item'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ItemThreeColumns extends StatelessWidget {
+  const _ItemThreeColumns({required this.columns});
+
+  final List<_ItemInfoColumn> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [for (final column in columns) Expanded(child: column)],
+    );
+  }
+}
+
+class _ItemInfoColumn extends StatelessWidget {
+  const _ItemInfoColumn({
+    required this.label,
+    required this.value,
+    this.align = TextAlign.left,
+    this.color = const Color(0xFF27408B),
+    this.pill = false,
+  });
 
   final String label;
-  final bool highlighted;
+  final String value;
+  final TextAlign align;
+  final Color color;
+  final bool pill;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: highlighted
-            ? theme.colorScheme.primaryContainer
-            : theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(label, style: theme.textTheme.bodySmall),
-      ),
+    return Column(
+      crossAxisAlignment: align == TextAlign.right
+          ? CrossAxisAlignment.end
+          : align == TextAlign.center
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          textAlign: align,
+          style: theme.textTheme.labelSmall?.copyWith(fontSize: 10),
+        ),
+        const SizedBox(height: 2),
+        if (pill)
+          _ItemCodePill(code: value, color: color)
+        else
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: align,
+            style: theme.textTheme.titleMedium?.copyWith(color: color),
+          ),
+      ],
     );
   }
 }
 
 class _ItemCodePill extends StatelessWidget {
-  const _ItemCodePill({required this.code});
+  const _ItemCodePill({required this.code, required this.color});
 
   final String code;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1288,7 +1415,7 @@ class _ItemCodePill extends StatelessWidget {
       height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
+        color: color,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Padding(
@@ -1299,12 +1426,36 @@ class _ItemCodePill extends StatelessWidget {
             code,
             maxLines: 1,
             textAlign: TextAlign.center,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
+            style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ItemInfoBlock extends StatelessWidget {
+  const _ItemInfoBlock({
+    required this.label,
+    required this.value,
+    this.valueStyle,
+  });
+
+  final String label;
+  final String value;
+  final TextStyle? valueStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.labelSmall?.copyWith(fontSize: 10)),
+        const SizedBox(height: 2),
+        Text(value, style: valueStyle ?? theme.textTheme.titleMedium),
+      ],
     );
   }
 }

@@ -5,6 +5,8 @@ import '../../core/models/funcionario.dart';
 import '../../core/widgets/operational_keyboard.dart';
 import 'employee_repository.dart';
 
+const _employeeColor = Color(0xFFFF9A7B);
+
 class EmployeeSelectionPage extends StatefulWidget {
   const EmployeeSelectionPage({
     super.key,
@@ -95,6 +97,8 @@ class _EmployeeSelectionPageState extends State<EmployeeSelectionPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Funcionario'),
+        backgroundColor: _employeeColor,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             tooltip: 'Atualizar',
@@ -134,6 +138,7 @@ class _EmployeeSelectionPageState extends State<EmployeeSelectionPage> {
                   useSystemKeyboard: widget.config.physicalKeyboardEnabled,
                   consulting: _consulting,
                   onConsult: _consultTypedEmployee,
+                  previewLoader: (value) => _previewEmployee(value, employees),
                 ),
                 const SizedBox(height: 16),
                 ...employees.map(
@@ -158,6 +163,32 @@ class _EmployeeSelectionPageState extends State<EmployeeSelectionPage> {
       ),
     );
   }
+
+  Future<String?> _previewEmployee(
+    String value,
+    List<Funcionario> employees,
+  ) async {
+    final query = value.trim();
+    final codigo = int.tryParse(query);
+    if (query.isEmpty || codigo == null || codigo <= 0) {
+      return null;
+    }
+
+    final exactMatches = employees.where(
+      (employee) => employee.codigo == codigo,
+    );
+    final matches = exactMatches.isNotEmpty
+        ? exactMatches
+        : employees.where(
+            (employee) => employee.codigo.toString().startsWith(query),
+          );
+    if (matches.isEmpty) {
+      return null;
+    }
+
+    final employee = matches.first;
+    return '${employee.codigo} - ${employee.nome}';
+  }
 }
 
 class _EmployeeInputCard extends StatelessWidget {
@@ -166,12 +197,14 @@ class _EmployeeInputCard extends StatelessWidget {
     required this.useSystemKeyboard,
     required this.consulting,
     required this.onConsult,
+    required this.previewLoader,
   });
 
   final TextEditingController controller;
   final bool useSystemKeyboard;
   final bool consulting;
   final VoidCallback onConsult;
+  final OperationalKeyboardPreviewLoader previewLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -188,12 +221,13 @@ class _EmployeeInputCard extends StatelessWidget {
               labelText: 'Codigo do funcionario',
               prefixIcon: Icons.badge_outlined,
               mode: OperationalKeyboardMode.numeric,
-              color: const Color(0xFFFF9A7B),
+              color: _employeeColor,
+              clearOnOpen: true,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
               showListAction: true,
               onConfirm: onConsult,
-              onList: onConsult,
+              previewLoader: previewLoader,
             );
             final button = useSystemKeyboard
                 ? FilledButton.icon(
@@ -245,7 +279,7 @@ class _CodePill extends StatelessWidget {
       height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
+        color: _employeeColor,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Padding(
@@ -256,9 +290,7 @@ class _CodePill extends StatelessWidget {
             code,
             maxLines: 1,
             textAlign: TextAlign.center,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
+            style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
           ),
         ),
       ),

@@ -53,6 +53,114 @@ void main() {
       ),
     );
   });
+
+  test(
+    'searchProducts item mode uses Delphi numeric field by length',
+    () async {
+      final client = _FakeClient(
+        responseBody: jsonEncode([
+          {
+            'codigo_produto': '12',
+            'codigo_reduzido': '99',
+            'codigo_barra': '7890000000001',
+            'descricao_produto': 'PRODUTO 12',
+            'grupo_produto': '1',
+            'valor_unitario': '3.00',
+            'unidade_produto': 'UN',
+          },
+          {
+            'codigo_produto': '5000',
+            'codigo_reduzido': '12',
+            'codigo_barra': '7890000000002',
+            'descricao_produto': 'ITEM CERTO',
+            'grupo_produto': '1',
+            'valor_unitario': '4.00',
+            'unidade_produto': 'UN',
+          },
+        ]),
+      );
+      final repository = ProductRepository(config: config, client: client);
+
+      final products = await repository.searchProducts(
+        '12',
+        mode: ProductSearchMode.item,
+      );
+
+      expect(products, hasLength(1));
+      expect(products.single.codigoReduzido, 12);
+      expect(products.single.descricao, 'ITEM CERTO');
+    },
+  );
+
+  test('searchProducts item mode uses product code for six digits', () async {
+    final client = _FakeClient(
+      responseBody: jsonEncode([
+        {
+          'codigo_produto': '123456',
+          'codigo_reduzido': '10',
+          'codigo_barra': '7890000000001',
+          'descricao_produto': 'CODIGO NORMAL',
+          'grupo_produto': '1',
+          'valor_unitario': '3.00',
+          'unidade_produto': 'UN',
+        },
+        {
+          'codigo_produto': '5000',
+          'codigo_reduzido': '123456',
+          'codigo_barra': '7890000000002',
+          'descricao_produto': 'REDUZIDO ERRADO',
+          'grupo_produto': '1',
+          'valor_unitario': '4.00',
+          'unidade_produto': 'UN',
+        },
+      ]),
+    );
+    final repository = ProductRepository(config: config, client: client);
+
+    final products = await repository.searchProducts(
+      '123456',
+      mode: ProductSearchMode.item,
+    );
+
+    expect(products, hasLength(1));
+    expect(products.single.codigo, 123456);
+    expect(products.single.descricao, 'CODIGO NORMAL');
+  });
+
+  test('searchProducts item mode uses barcode over seven digits', () async {
+    final client = _FakeClient(
+      responseBody: jsonEncode([
+        {
+          'codigo_produto': '7890000000001',
+          'codigo_reduzido': '10',
+          'codigo_barra': '999',
+          'descricao_produto': 'CODIGO ERRADO',
+          'grupo_produto': '1',
+          'valor_unitario': '3.00',
+          'unidade_produto': 'UN',
+        },
+        {
+          'codigo_produto': '5000',
+          'codigo_reduzido': '12',
+          'codigo_barra': '7890000000001',
+          'descricao_produto': 'BARRAS CERTO',
+          'grupo_produto': '1',
+          'valor_unitario': '4.00',
+          'unidade_produto': 'UN',
+        },
+      ]),
+    );
+    final repository = ProductRepository(config: config, client: client);
+
+    final products = await repository.searchProducts(
+      '7890000000001',
+      mode: ProductSearchMode.item,
+    );
+
+    expect(products, hasLength(1));
+    expect(products.single.codigoBarra, '7890000000001');
+    expect(products.single.descricao, 'BARRAS CERTO');
+  });
 }
 
 class _FakeClient extends http.BaseClient {

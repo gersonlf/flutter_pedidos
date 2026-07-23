@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../core/models/funcionario.dart';
 import '../../core/models/pedido_cozinha.dart';
+import '../../core/widgets/operational_keyboard.dart';
 import 'kitchen_repository.dart';
 
 class KitchenPage extends StatefulWidget {
@@ -184,6 +185,7 @@ class _KitchenPageState extends State<KitchenPage> {
               _KitchenInputCard(
                 controller: _commandController,
                 employee: widget.employee,
+                useSystemKeyboard: widget.config.physicalKeyboardEnabled,
                 busy: _busy,
                 onCall: _callTypedCommand,
               ),
@@ -223,12 +225,14 @@ class _KitchenInputCard extends StatelessWidget {
   const _KitchenInputCard({
     required this.controller,
     required this.employee,
+    required this.useSystemKeyboard,
     required this.busy,
     required this.onCall,
   });
 
   final TextEditingController controller;
   final Funcionario employee;
+  final bool useSystemKeyboard;
   final bool busy;
   final VoidCallback onCall;
 
@@ -260,16 +264,18 @@ class _KitchenInputCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              TextField(
+              OperationalKeyboardTextField(
                 controller: controller,
                 enabled: !busy,
+                useSystemKeyboard: useSystemKeyboard,
+                title: 'informe a comanda',
+                labelText: 'Codigo da comanda',
+                prefixIcon: Icons.receipt_long_outlined,
+                mode: OperationalKeyboardMode.numeric,
+                color: const Color(0xFF35B779),
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
-                onSubmitted: (_) => onCall(),
-                decoration: const InputDecoration(
-                  labelText: 'Codigo da comanda',
-                  prefixIcon: Icon(Icons.receipt_long_outlined),
-                ),
+                onConfirm: onCall,
               ),
               const SizedBox(height: 12),
               SizedBox(

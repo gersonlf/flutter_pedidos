@@ -4,6 +4,8 @@ import '../../core/config/app_config.dart';
 import '../../core/config/app_config_store.dart';
 import '../../core/models/empresa_config.dart';
 import '../../core/models/funcionario.dart';
+import '../../core/platform/app_fullscreen.dart';
+import '../../core/widgets/operational_keyboard.dart';
 import '../company/company_repository.dart';
 import '../commands/command_selection.dart';
 import '../commands/command_selection_page.dart';
@@ -77,11 +79,37 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _toggleFullscreen() async {
+    final changed = await toggleAppFullscreen();
+    if (!changed && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tela cheia nao disponivel neste navegador.'),
+        ),
+      );
+    }
+  }
+
   Future<bool> _askSettingsPassword(AppConfig config) async {
-    final password = await showDialog<String>(
-      context: context,
-      builder: (_) => const _SettingsPasswordDialog(),
-    );
+    String? password;
+    if (config.physicalKeyboardEnabled) {
+      password = await showDialog<String>(
+        context: context,
+        builder: (_) => const _SettingsPasswordDialog(),
+      );
+    } else {
+      final result = await showOperationalKeyboard(
+        context: context,
+        title: 'informe a senha',
+        initialValue: '',
+        mode: OperationalKeyboardMode.numeric,
+        color: const Color(0xFF8E8E8E),
+        obscure: true,
+      );
+      if (result != null && result.action != OperationalKeyboardAction.back) {
+        password = result.value;
+      }
+    }
 
     if (password == null) {
       return false;
@@ -159,7 +187,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    command = await _applyCommandRequirements(command, companyConfig);
+    command = await _applyCommandRequirements(command, config, companyConfig);
     if (command == null || !mounted) {
       return;
     }
@@ -225,15 +253,19 @@ class _HomePageState extends State<HomePage> {
 
   Future<CommandSelection?> _applyCommandRequirements(
     CommandSelection command,
+    AppConfig config,
     EmpresaConfig companyConfig,
   ) async {
     var resolved = command;
 
     if (companyConfig.controlaMesa && resolved.codigoMesa <= 0) {
       final mesa = await _askRequiredNumber(
+        config: config,
         title: 'Mesa da comanda',
+        keyboardTitle: 'informe a mesa',
         label: 'Mesa',
         icon: Icons.table_restaurant_outlined,
+        color: const Color(0xFF35B779),
       );
 
       if (mesa == null) {
@@ -245,9 +277,12 @@ class _HomePageState extends State<HomePage> {
 
     if (companyConfig.controlaTag && resolved.codigoTag <= 0) {
       final tag = await _askRequiredNumber(
+        config: config,
         title: 'Tag da comanda',
+        keyboardTitle: 'informe a tag',
         label: 'Tag',
         icon: Icons.sell_outlined,
+        color: const Color(0xFF35B779),
       );
 
       if (tag == null) {
@@ -261,15 +296,43 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<int?> _askRequiredNumber({
+    required AppConfig config,
     required String title,
+    required String keyboardTitle,
     required String label,
     required IconData icon,
-  }) {
-    return showDialog<int>(
+    required Color color,
+  }) async {
+    if (config.physicalKeyboardEnabled) {
+      return showDialog<int>(
+        context: context,
+        builder: (_) =>
+            _RequiredNumberDialog(title: title, label: label, icon: icon),
+      );
+    }
+
+    final result = await showOperationalKeyboard(
       context: context,
-      builder: (_) =>
-          _RequiredNumberDialog(title: title, label: label, icon: icon),
+      title: keyboardTitle,
+      initialValue: '',
+      mode: OperationalKeyboardMode.numeric,
+      color: color,
     );
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return null;
+    }
+
+    final value = int.tryParse(result.value);
+    if (value == null || value <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Informe um valor valido')),
+        );
+      }
+      return null;
+    }
+
+    return value;
   }
 
   @override
@@ -289,6 +352,11 @@ class _HomePageState extends State<HomePage> {
           appBar: AppBar(
             title: const Text('Pedidos Restaurante'),
             actions: [
+              IconButton(
+                tooltip: 'Tela cheia',
+                onPressed: _toggleFullscreen,
+                icon: const Icon(Icons.fullscreen_outlined),
+              ),
               IconButton(
                 tooltip: 'Configuracoes',
                 onPressed: () => _openSettings(config),
@@ -420,10 +488,10 @@ class _CommandPanel extends StatelessWidget {
         title: Text(
           command == null ? 'Consultar comandas' : 'Selecionar outra comanda',
         ),
-        trailing: FilledButton.icon(
+        trailing: _HomeActionButton(
           onPressed: enabled ? onSelectCommand : null,
           icon: const Icon(Icons.search_outlined),
-          label: const Text('Selecionar'),
+          label: 'Selecionar',
         ),
       ),
     );
@@ -460,10 +528,10 @@ class _ItemsPanel extends StatelessWidget {
               ? 'Comanda bloqueada'
               : 'Abrir itens da comanda selecionada',
         ),
-        trailing: FilledButton.icon(
+        trailing: _HomeActionButton(
           onPressed: enabled ? onOpenItems : null,
           icon: const Icon(Icons.open_in_new_outlined),
-          label: const Text('Abrir'),
+          label: 'Abrir',
         ),
       ),
     );
@@ -528,10 +596,10 @@ class _EmployeePanel extends StatelessWidget {
               'Selecione um funcionario para iniciar o atendimento',
         ),
         subtitle: employee == null ? null : Text('Codigo ${employee!.codigo}'),
-        trailing: FilledButton.icon(
+        trailing: _HomeActionButton(
           onPressed: enabled ? onSelectEmployee : null,
           icon: const Icon(Icons.person_search_outlined),
-          label: const Text('Selecionar'),
+          label: 'Selecionar',
         ),
       ),
     );
@@ -630,10 +698,39 @@ class _KitchenPanel extends StatelessWidget {
               ? 'Pedidos prontos e entregues'
               : 'Modulo desabilitado',
         ),
-        trailing: FilledButton.icon(
+        trailing: _HomeActionButton(
           onPressed: enabled ? onOpenKitchen : null,
           icon: const Icon(Icons.open_in_new_outlined),
-          label: const Text('Abrir'),
+          label: 'Abrir',
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeActionButton extends StatelessWidget {
+  const _HomeActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  static const double width = 142;
+
+  final VoidCallback? onPressed;
+  final Widget icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        icon: icon,
+        label: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label, maxLines: 1),
         ),
       ),
     );

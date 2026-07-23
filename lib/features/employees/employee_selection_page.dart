@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/models/funcionario.dart';
+import '../../core/widgets/operational_keyboard.dart';
 import 'employee_repository.dart';
 
 class EmployeeSelectionPage extends StatefulWidget {
@@ -130,6 +131,7 @@ class _EmployeeSelectionPageState extends State<EmployeeSelectionPage> {
               children: [
                 _EmployeeInputCard(
                   controller: _employeeController,
+                  useSystemKeyboard: widget.config.physicalKeyboardEnabled,
                   consulting: _consulting,
                   onConsult: _consultTypedEmployee,
                 ),
@@ -161,11 +163,13 @@ class _EmployeeSelectionPageState extends State<EmployeeSelectionPage> {
 class _EmployeeInputCard extends StatelessWidget {
   const _EmployeeInputCard({
     required this.controller,
+    required this.useSystemKeyboard,
     required this.consulting,
     required this.onConsult,
   });
 
   final TextEditingController controller;
+  final bool useSystemKeyboard;
   final bool consulting;
   final VoidCallback onConsult;
 
@@ -176,41 +180,48 @@ class _EmployeeInputCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final field = TextField(
+            final field = OperationalKeyboardTextField(
               controller: controller,
-              autofocus: true,
               enabled: !consulting,
+              useSystemKeyboard: useSystemKeyboard,
+              title: 'informe o funcionario',
+              labelText: 'Codigo do funcionario',
+              prefixIcon: Icons.badge_outlined,
+              mode: OperationalKeyboardMode.numeric,
+              color: const Color(0xFFFF9A7B),
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              onSubmitted: (_) => onConsult(),
-              decoration: const InputDecoration(
-                labelText: 'Codigo do funcionario',
-                prefixIcon: Icon(Icons.badge_outlined),
-              ),
+              showListAction: true,
+              onConfirm: onConsult,
+              onList: onConsult,
             );
-            final button = FilledButton.icon(
-              onPressed: consulting ? null : onConsult,
-              icon: consulting
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.search_outlined),
-              label: const Text('Consultar funcionario'),
-            );
+            final button = useSystemKeyboard
+                ? FilledButton.icon(
+                    onPressed: consulting ? null : onConsult,
+                    icon: consulting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.search_outlined),
+                    label: const Text('Consultar funcionario'),
+                  )
+                : null;
 
             if (constraints.maxWidth < 420) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [field, const SizedBox(height: 12), button],
+                children: [
+                  field,
+                  if (button != null) ...[const SizedBox(height: 12), button],
+                ],
               );
             }
 
             return Row(
               children: [
                 Expanded(child: field),
-                const SizedBox(width: 12),
-                button,
+                if (button != null) ...[const SizedBox(width: 12), button],
               ],
             );
           },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/config/app_config_store.dart';
+import '../../core/widgets/operational_keyboard.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -87,6 +88,34 @@ class _SettingsPageState extends State<SettingsPage> {
     Navigator.of(context).pop(true);
   }
 
+  Future<void> _openKeyboard({
+    required TextEditingController controller,
+    required String title,
+    required OperationalKeyboardMode mode,
+    required Color color,
+    bool obscure = false,
+  }) async {
+    if (_physicalKeyboardEnabled) {
+      return;
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: title,
+      initialValue: controller.text,
+      mode: mode,
+      color: color,
+      obscure: obscure,
+      allowAlphaSwitch: mode == OperationalKeyboardMode.numeric,
+    );
+
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return;
+    }
+
+    controller.text = result.value;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,9 +128,17 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               TextFormField(
                 controller: _serverController,
+                readOnly: !_physicalKeyboardEnabled,
+                onTap: () => _openKeyboard(
+                  controller: _serverController,
+                  title: 'informe o endereco do servidor',
+                  mode: OperationalKeyboardMode.alpha,
+                  color: const Color(0xFF4169E1),
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Servidor',
                   prefixIcon: Icon(Icons.dns_outlined),
+                  suffixIcon: Icon(Icons.keyboard_alt_outlined),
                 ),
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -114,9 +151,17 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _portController,
+                readOnly: !_physicalKeyboardEnabled,
+                onTap: () => _openKeyboard(
+                  controller: _portController,
+                  title: 'informe a porta do servidor',
+                  mode: OperationalKeyboardMode.numeric,
+                  color: const Color(0xFF4169E1),
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Porta',
                   prefixIcon: Icon(Icons.numbers_outlined),
+                  suffixIcon: Icon(Icons.keyboard_alt_outlined),
                 ),
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
@@ -131,9 +176,17 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _contextController,
+                readOnly: !_physicalKeyboardEnabled,
+                onTap: () => _openKeyboard(
+                  controller: _contextController,
+                  title: 'informe o contexto',
+                  mode: OperationalKeyboardMode.alpha,
+                  color: const Color(0xFF4169E1),
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Contexto',
                   prefixIcon: Icon(Icons.folder_outlined),
+                  suffixIcon: Icon(Icons.keyboard_alt_outlined),
                 ),
                 textInputAction: TextInputAction.done,
                 validator: (value) {
@@ -204,9 +257,18 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _settingsPasswordController,
+                readOnly: !_physicalKeyboardEnabled,
+                onTap: () => _openKeyboard(
+                  controller: _settingsPasswordController,
+                  title: 'informe a senha',
+                  mode: OperationalKeyboardMode.alpha,
+                  color: const Color(0xFF8E8E8E),
+                  obscure: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Senha da configuracao',
                   prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+                  suffixIcon: Icon(Icons.keyboard_alt_outlined),
                 ),
                 obscureText: true,
                 textInputAction: TextInputAction.done,

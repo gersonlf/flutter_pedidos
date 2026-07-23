@@ -5,6 +5,7 @@ import '../../core/models/empresa_config.dart';
 import '../../core/models/funcionario.dart';
 import '../../core/models/item_comanda.dart';
 import '../../core/models/produto.dart';
+import '../../core/widgets/operational_keyboard.dart';
 import '../commands/command_selection.dart';
 import '../employees/employee_repository.dart';
 import '../kitchen/kitchen_repository.dart';
@@ -69,10 +70,15 @@ class _ItemListPageState extends State<ItemListPage> {
       return;
     }
 
-    final draft = await showDialog<_ItemDraft>(
-      context: context,
-      builder: (_) => _ItemDraftDialog(product: product),
-    );
+    _ItemDraft? draft;
+    if (widget.config.physicalKeyboardEnabled) {
+      draft = await showDialog<_ItemDraft>(
+        context: context,
+        builder: (_) => _ItemDraftDialog(product: product),
+      );
+    } else {
+      draft = await _askItemDraft(product);
+    }
 
     if (draft == null || draft.quantity <= 0 || !mounted) {
       return;
@@ -186,10 +192,7 @@ class _ItemListPageState extends State<ItemListPage> {
       return;
     }
 
-    final observation = await showDialog<String>(
-      context: context,
-      builder: (_) => _ObservationDialog(initialValue: item.observacao),
-    );
+    final observation = await _askObservation(initialValue: item.observacao);
 
     if (observation == null || !mounted) {
       return;
@@ -242,10 +245,7 @@ class _ItemListPageState extends State<ItemListPage> {
 
     Funcionario authorizedEmployee = widget.employee;
     if (widget.config.requirePasswordToDelete) {
-      final password = await showDialog<String>(
-        context: context,
-        builder: (_) => const _PasswordDialog(),
-      );
+      final password = await _askPassword();
 
       if (password == null || password.isEmpty || !mounted) {
         return;
@@ -337,14 +337,10 @@ class _ItemListPageState extends State<ItemListPage> {
       return;
     }
 
-    final novaComanda = await showDialog<int>(
-      context: context,
-      builder: (_) => _NumberDialog(
-        title: 'Trocar item de comanda',
-        label: 'Nova comanda',
-        icon: Icons.receipt_long_outlined,
-        invalidMessage: 'Informe uma comanda valida',
-      ),
+    final novaComanda = await _askNumber(
+      title: 'informe a nova comanda',
+      invalidMessage: 'Informe uma comanda valida',
+      color: const Color(0xFF35B779),
     );
 
     if (novaComanda == null || !mounted) {
@@ -408,10 +404,7 @@ class _ItemListPageState extends State<ItemListPage> {
         );
         return null;
       case TrocaComandaPolicy.exigeSenha:
-        final password = await showDialog<String>(
-          context: context,
-          builder: (_) => const _PasswordDialog(),
-        );
+        final password = await _askPassword();
 
         if (password == null || password.isEmpty || !mounted) {
           return null;
@@ -531,6 +524,132 @@ class _ItemListPageState extends State<ItemListPage> {
         builder: (_) => ProductOptionsPage(title: title, options: options),
       ),
     );
+  }
+
+  Future<_ItemDraft?> _askItemDraft(Produto product) async {
+    final quantityResult = await showOperationalKeyboard(
+      context: context,
+      title: 'informe a quantidade',
+      initialValue: '1',
+      mode: OperationalKeyboardMode.numeric,
+      color: const Color(0xFF35B779),
+      allowDecimal: product.permiteQuantidadeDecimal,
+    );
+
+    if (quantityResult == null ||
+        quantityResult.action == OperationalKeyboardAction.back) {
+      return null;
+    }
+
+    final normalized = quantityResult.value.replaceAll(',', '.');
+    final quantity = double.tryParse(normalized);
+    if (quantity == null || quantity <= 0) {
+      _showMessage('Informe uma quantidade valida');
+      return null;
+    }
+
+    if (!product.permiteQuantidadeDecimal && quantity % 1 != 0) {
+      _showMessage('Este produto aceita apenas quantidade inteira');
+      return null;
+    }
+
+    final observation = await _askObservation(initialValue: '');
+    if (!mounted) {
+      return null;
+    }
+
+    return _ItemDraft(quantity: quantity, observation: observation ?? '');
+  }
+
+  Future<int?> _askNumber({
+    required String title,
+    required String invalidMessage,
+    required Color color,
+  }) async {
+    if (widget.config.physicalKeyboardEnabled) {
+      return showDialog<int>(
+        context: context,
+        builder: (_) => _NumberDialog(
+          title: title,
+          label: title,
+          icon: Icons.receipt_long_outlined,
+          invalidMessage: invalidMessage,
+        ),
+      );
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: title,
+      initialValue: '',
+      mode: OperationalKeyboardMode.numeric,
+      color: color,
+    );
+
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return null;
+    }
+
+    final value = int.tryParse(result.value);
+    if (value == null || value <= 0) {
+      _showMessage(invalidMessage);
+      return null;
+    }
+
+    return value;
+  }
+
+  Future<String?> _askPassword() async {
+    if (widget.config.physicalKeyboardEnabled) {
+      return showDialog<String>(
+        context: context,
+        builder: (_) => const _PasswordDialog(),
+      );
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: 'informe a senha',
+      initialValue: '',
+      mode: OperationalKeyboardMode.numeric,
+      color: const Color(0xFF8E8E8E),
+      obscure: true,
+    );
+
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return null;
+    }
+
+    return result.value;
+  }
+
+  Future<String?> _askObservation({required String initialValue}) async {
+    if (widget.config.physicalKeyboardEnabled) {
+      return showDialog<String>(
+        context: context,
+        builder: (_) => _ObservationDialog(initialValue: initialValue),
+      );
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: 'informe a observacao',
+      initialValue: initialValue,
+      mode: OperationalKeyboardMode.alpha,
+      color: const Color(0xFF8E8E8E),
+    );
+
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return initialValue.isEmpty ? '' : null;
+    }
+
+    return result.value;
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

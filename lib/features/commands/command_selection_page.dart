@@ -5,6 +5,7 @@ import '../../core/models/empresa_config.dart';
 import '../../core/models/comanda.dart';
 import '../../core/models/funcionario.dart';
 import '../../core/utils/command_check_digit.dart';
+import '../../core/widgets/operational_keyboard.dart';
 import '../employees/employee_repository.dart';
 import 'command_repository.dart';
 import 'command_selection.dart';
@@ -108,9 +109,12 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
       return;
     }
 
-    final novaMesa = await showDialog<int>(
-      context: context,
-      builder: (_) => _MesaDialog(initialValue: command.codigoMesa),
+    final novaMesa = await _askNumber(
+      title: 'informe a nova mesa',
+      initialValue: command.codigoMesa > 0 ? command.codigoMesa.toString() : '',
+      color: const Color(0xFF35B779),
+      invalidMessage: 'Informe uma mesa valida',
+      allowZero: true,
     );
 
     if (novaMesa == null || !mounted) {
@@ -158,14 +162,10 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
       return;
     }
 
-    final novaComanda = await showDialog<int>(
-      context: context,
-      builder: (_) => _NumberDialog(
-        title: 'Trocar comanda',
-        label: 'Nova comanda',
-        icon: Icons.receipt_long_outlined,
-        invalidMessage: 'Informe uma comanda valida',
-      ),
+    final novaComanda = await _askNumber(
+      title: 'informe a nova comanda',
+      color: const Color(0xFF35B779),
+      invalidMessage: 'Informe uma comanda valida',
     );
 
     if (novaComanda == null || !mounted) {
@@ -215,10 +215,7 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
       case TrocaComandaPolicy.livre:
         return widget.employee;
       case TrocaComandaPolicy.exigeSenha:
-        final password = await showDialog<String>(
-          context: context,
-          builder: (_) => const _PasswordDialog(),
-        );
+        final password = await _askPassword();
 
         if (password == null || password.isEmpty || !mounted) {
           return null;
@@ -289,10 +286,7 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
 
     Funcionario authorizedEmployee = widget.employee;
     if (widget.config.requirePasswordToDelete) {
-      final password = await showDialog<String>(
-        context: context,
-        builder: (_) => const _PasswordDialog(),
-      );
+      final password = await _askPassword();
 
       if (password == null || password.isEmpty || !mounted) {
         return;
@@ -378,6 +372,71 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<int?> _askNumber({
+    required String title,
+    required Color color,
+    required String invalidMessage,
+    String initialValue = '',
+    bool allowZero = false,
+  }) async {
+    if (widget.config.physicalKeyboardEnabled) {
+      return showDialog<int>(
+        context: context,
+        builder: (_) => _NumberDialog(
+          title: title,
+          label: title,
+          icon: Icons.receipt_long_outlined,
+          invalidMessage: invalidMessage,
+          initialValue: initialValue,
+          allowZero: allowZero,
+        ),
+      );
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: title,
+      initialValue: initialValue,
+      mode: OperationalKeyboardMode.numeric,
+      color: color,
+    );
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return null;
+    }
+
+    final value = int.tryParse(result.value);
+    if (value == null || value < (allowZero ? 0 : 1)) {
+      _showMessage(invalidMessage);
+      return null;
+    }
+
+    return value;
+  }
+
+  Future<String?> _askPassword() async {
+    if (widget.config.physicalKeyboardEnabled) {
+      return showDialog<String>(
+        context: context,
+        builder: (_) => const _PasswordDialog(),
+      );
+    }
+
+    final result = await showOperationalKeyboard(
+      context: context,
+      title: 'informe a senha',
+      initialValue: '',
+      mode: OperationalKeyboardMode.numeric,
+      color: const Color(0xFF8E8E8E),
+      obscure: true,
+    );
+
+    if (result == null || result.action == OperationalKeyboardAction.back) {
+      return null;
+    }
+
+    return result.value;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -398,6 +457,7 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
             _CommandInputCard(
               controller: _commandController,
               employee: widget.employee,
+              useSystemKeyboard: widget.config.physicalKeyboardEnabled,
               consulting: _consulting,
               onConsult: _consultTypedCommand,
             ),
@@ -461,27 +521,22 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
   }
 }
 
-class _MesaDialog extends StatefulWidget {
-  const _MesaDialog({required this.initialValue});
-
-  final int initialValue;
-
-  @override
-  State<_MesaDialog> createState() => _MesaDialogState();
-}
-
 class _NumberDialog extends StatefulWidget {
   const _NumberDialog({
     required this.title,
     required this.label,
     required this.icon,
     required this.invalidMessage,
+    this.initialValue = '',
+    this.allowZero = false,
   });
 
   final String title;
   final String label;
   final IconData icon;
   final String invalidMessage;
+  final String initialValue;
+  final bool allowZero;
 
   @override
   State<_NumberDialog> createState() => _NumberDialogState();
@@ -492,6 +547,12 @@ class _NumberDialogState extends State<_NumberDialog> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _controller.text = widget.initialValue;
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -499,7 +560,7 @@ class _NumberDialogState extends State<_NumberDialog> {
 
   void _confirm() {
     final value = int.tryParse(_controller.text.trim());
-    if (value == null || value <= 0) {
+    if (value == null || value < (widget.allowZero ? 0 : 1)) {
       setState(() {
         _error = widget.invalidMessage;
       });
@@ -531,63 +592,6 @@ class _NumberDialogState extends State<_NumberDialog> {
           child: const Text('Cancelar'),
         ),
         FilledButton(onPressed: _confirm, child: const Text('Confirmar')),
-      ],
-    );
-  }
-}
-
-class _MesaDialogState extends State<_MesaDialog> {
-  late final TextEditingController _controller;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(
-      text: widget.initialValue > 0 ? widget.initialValue.toString() : '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _confirm() {
-    final mesa = int.tryParse(_controller.text.trim());
-    if (mesa == null || mesa < 0) {
-      setState(() {
-        _error = 'Informe uma mesa valida';
-      });
-      return;
-    }
-
-    Navigator.of(context).pop(mesa);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Trocar mesa'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        keyboardType: TextInputType.number,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _confirm(),
-        decoration: InputDecoration(
-          labelText: 'Nova mesa',
-          prefixIcon: const Icon(Icons.table_restaurant_outlined),
-          errorText: _error,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(onPressed: _confirm, child: const Text('Salvar')),
       ],
     );
   }
@@ -644,12 +648,14 @@ class _CommandInputCard extends StatelessWidget {
   const _CommandInputCard({
     required this.controller,
     required this.employee,
+    required this.useSystemKeyboard,
     required this.consulting,
     required this.onConsult,
   });
 
   final TextEditingController controller;
   final Funcionario employee;
+  final bool useSystemKeyboard;
   final bool consulting;
   final VoidCallback onConsult;
 
@@ -676,30 +682,37 @@ class _CommandInputCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            TextField(
+            OperationalKeyboardTextField(
               controller: controller,
+              enabled: !consulting,
+              useSystemKeyboard: useSystemKeyboard,
+              title: 'informe a comanda',
+              labelText: 'Codigo da comanda',
+              prefixIcon: Icons.receipt_long_outlined,
+              mode: OperationalKeyboardMode.numeric,
+              color: const Color(0xFF35B779),
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              onSubmitted: (_) => onConsult(),
-              decoration: const InputDecoration(
-                labelText: 'Codigo da comanda',
-                prefixIcon: Icon(Icons.receipt_long_outlined),
-              ),
+              showListAction: true,
+              onConfirm: onConsult,
+              onList: onConsult,
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: consulting ? null : onConsult,
-                icon: consulting
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.search_outlined),
-                label: const Text('Consultar comanda'),
+            if (useSystemKeyboard) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: consulting ? null : onConsult,
+                  icon: consulting
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.search_outlined),
+                  label: const Text('Consultar comanda'),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

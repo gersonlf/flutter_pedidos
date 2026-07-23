@@ -1,11 +1,11 @@
 {
-    "name": "flutter_pedidos",
-    "short_name": "flutter_pedidos",
+    "name": "Pedidos Restaurante",
+    "short_name": "Pedidos",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7F8FA",
+    "theme_color": "#006D77",
+    "description": "Aplicativo operacional de pedidos para restaurante.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/models/produto.dart';
+import '../../core/widgets/operational_keyboard.dart';
 import 'product_repository.dart';
 
 class ProductSearchPage extends StatefulWidget {
@@ -35,6 +36,13 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
   }
 
   void _search() {
+    if (_searchController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe um produto para pesquisar.')),
+      );
+      return;
+    }
+
     setState(() {
       _productsFuture = _repository.searchProducts(_searchController.text);
     });
@@ -57,34 +65,48 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                 padding: const EdgeInsets.all(16),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final field = TextField(
+                    final field = OperationalKeyboardTextField(
                       controller: _searchController,
-                      autofocus: true,
+                      useSystemKeyboard: widget.config.physicalKeyboardEnabled,
+                      title: 'informe o produto',
+                      labelText: 'Produto, codigo ou barras',
+                      prefixIcon: Icons.search_outlined,
+                      mode: OperationalKeyboardMode.numeric,
+                      color: const Color(0xFF4169E1),
+                      allowAlphaSwitch: true,
                       textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _search(),
-                      decoration: const InputDecoration(
-                        labelText: 'Produto, codigo ou barras',
-                        prefixIcon: Icon(Icons.search_outlined),
-                      ),
+                      showListAction: true,
+                      onConfirm: _search,
+                      onList: _search,
                     );
-                    final button = FilledButton.icon(
-                      onPressed: _search,
-                      icon: const Icon(Icons.search),
-                      label: const Text('Pesquisar'),
-                    );
+                    final button = widget.config.physicalKeyboardEnabled
+                        ? FilledButton.icon(
+                            onPressed: _search,
+                            icon: const Icon(Icons.search),
+                            label: const Text('Pesquisar'),
+                          )
+                        : null;
 
                     if (constraints.maxWidth < 420) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [field, const SizedBox(height: 12), button],
+                        children: [
+                          field,
+                          if (button != null) ...[
+                            const SizedBox(height: 12),
+                            button,
+                          ],
+                        ],
                       );
                     }
 
                     return Row(
                       children: [
                         Expanded(child: field),
-                        const SizedBox(width: 12),
-                        button,
+                        if (button != null) ...[
+                          const SizedBox(width: 12),
+                          button,
+                        ],
                       ],
                     );
                   },

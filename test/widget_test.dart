@@ -30,7 +30,7 @@ void main() {
     await tester.tap(find.text('Configurar').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Senha da configuracao'), findsOneWidget);
-    expect(find.text('Entrar'), findsOneWidget);
+    expect(find.text('informe a senha'), findsOneWidget);
+    expect(find.text('confirmar'), findsOneWidget);
   });
 }

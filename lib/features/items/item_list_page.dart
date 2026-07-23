@@ -736,37 +736,47 @@ class _ItemListPageState extends State<ItemListPage> {
 
             final items = snapshot.data ?? const <ItemComanda>[];
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            return Column(
               children: [
-                _ItemHeader(
-                  employee: widget.employee,
-                  command: widget.command,
-                  itemCount: items.length,
-                  total: items.fold<double>(
-                    0,
-                    (sum, item) => sum + item.valorTotal,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (items.isEmpty)
-                  _ItemError(
-                    message: 'Nenhum item encontrado para esta comanda.',
-                    onRetry: _reload,
-                  )
-                else
-                  ...items.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _ItemTile(
-                        item: item,
-                        enabled: !widget.command.estaBloqueada && !_busy,
-                        onChangeCommand: () => _changeItemCommand(item),
-                        onChangeObservation: () => _changeObservation(item),
-                        onDelete: () => _deleteItem(item),
-                      ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: _ItemHeader(
+                    employee: widget.employee,
+                    command: widget.command,
+                    itemCount: items.length,
+                    total: items.fold<double>(
+                      0,
+                      (sum, item) => sum + item.valorTotal,
                     ),
                   ),
+                ),
+                Expanded(
+                  child: items.isEmpty
+                      ? _ItemError(
+                          message: 'Nenhum item encontrado para esta comanda.',
+                          onRetry: _reload,
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          children: [
+                            ...items.map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _ItemTile(
+                                  item: item,
+                                  enabled:
+                                      !widget.command.estaBloqueada && !_busy,
+                                  onChangeCommand: () =>
+                                      _changeItemCommand(item),
+                                  onChangeObservation: () =>
+                                      _changeObservation(item),
+                                  onDelete: () => _deleteItem(item),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ],
             );
           },

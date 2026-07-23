@@ -130,30 +130,41 @@ class _EmployeeSelectionPageState extends State<EmployeeSelectionPage> {
               );
             }
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
+            return Column(
               children: [
-                _EmployeeInputCard(
-                  controller: _employeeController,
-                  useSystemKeyboard: widget.config.physicalKeyboardEnabled,
-                  consulting: _consulting,
-                  onConsult: _consultTypedEmployee,
-                  previewLoader: (value) => _previewEmployee(value, employees),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: _EmployeeInputCard(
+                    controller: _employeeController,
+                    useSystemKeyboard: widget.config.physicalKeyboardEnabled,
+                    consulting: _consulting,
+                    onConsult: _consultTypedEmployee,
+                    previewLoader: (value) =>
+                        _previewEmployee(value, employees),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                ...employees.map(
-                  (employee) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Card(
-                      child: ListTile(
-                        leading: _CodePill(code: employee.codigo.toString()),
-                        title: Text(employee.nome),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: _consulting
-                            ? null
-                            : () => Navigator.of(context).pop(employee),
-                      ),
-                    ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    itemCount: employees.length,
+                    itemBuilder: (context, index) {
+                      final employee = employees[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          child: ListTile(
+                            leading: _CodePill(
+                              code: employee.codigo.toString(),
+                            ),
+                            title: Text(employee.nome),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _consulting
+                                ? null
+                                : () => Navigator.of(context).pop(employee),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],

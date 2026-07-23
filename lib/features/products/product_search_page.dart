@@ -86,116 +86,141 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final field = OperationalKeyboardTextField(
-                      controller: _searchController,
-                      useSystemKeyboard: widget.config.physicalKeyboardEnabled,
-                      title: 'informe o produto',
-                      labelText: 'Produto, codigo ou barras',
-                      prefixIcon: Icons.search_outlined,
-                      mode: OperationalKeyboardMode.numeric,
-                      color: _productColor,
-                      allowAlphaSwitch: true,
-                      clearOnOpen: true,
-                      textInputAction: TextInputAction.search,
-                      showListAction: true,
-                      onConfirm: _search,
-                      onList: _search,
-                      previewLoader: _previewProduct,
-                    );
-                    final button = widget.config.physicalKeyboardEnabled
-                        ? FilledButton.icon(
-                            onPressed: _search,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _productColor,
-                              foregroundColor: Colors.white,
-                            ),
-                            icon: const Icon(Icons.search),
-                            label: const Text('Pesquisar'),
-                          )
-                        : null;
-
-                    if (constraints.maxWidth < 420) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          field,
-                          if (button != null) ...[
-                            const SizedBox(height: 12),
-                            button,
-                          ],
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      children: [
-                        Expanded(child: field),
-                        if (button != null) ...[
-                          const SizedBox(width: 12),
-                          button,
-                        ],
-                      ],
-                    );
-                  },
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: _ProductSearchCard(
+                controller: _searchController,
+                useSystemKeyboard: widget.config.physicalKeyboardEnabled,
+                onSearch: _search,
+                previewLoader: _previewProduct,
               ),
             ),
-            const SizedBox(height: 16),
-            if (_productsFuture == null)
-              const _ProductMessage(
-                icon: Icons.search_outlined,
-                message: 'Pesquise por descricao, codigo ou codigo de barras.',
-              )
-            else
-              FutureBuilder<List<Produto>>(
-                future: _productsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _productsFuture == null
+                    ? const _ProductMessage(
+                        icon: Icons.search_outlined,
+                        message:
+                            'Pesquise por descricao, codigo ou codigo de barras.',
+                      )
+                    : FutureBuilder<List<Produto>>(
+                        future: _productsFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
 
-                  if (snapshot.hasError) {
-                    return _ProductMessage(
-                      icon: Icons.error_outline,
-                      message: snapshot.error.toString(),
-                    );
-                  }
+                          if (snapshot.hasError) {
+                            return _ProductMessage(
+                              icon: Icons.error_outline,
+                              message: snapshot.error.toString(),
+                            );
+                          }
 
-                  final products = snapshot.data ?? const <Produto>[];
-                  if (products.isEmpty) {
-                    return const _ProductMessage(
-                      icon: Icons.inventory_2_outlined,
-                      message: 'Nenhum produto encontrado.',
-                    );
-                  }
+                          final products = snapshot.data ?? const <Produto>[];
+                          if (products.isEmpty) {
+                            return const _ProductMessage(
+                              icon: Icons.inventory_2_outlined,
+                              message: 'Nenhum produto encontrado.',
+                            );
+                          }
 
-                  return Column(
-                    children: products
-                        .map(
-                          (product) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _ProductTile(
-                              product: product,
-                              selectionEnabled: widget.selectionEnabled,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
+                          return ListView.builder(
+                            padding: EdgeInsets.zero,
+                            itemCount: products.length,
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _ProductTile(
+                                  product: product,
+                                  selectionEnabled: widget.selectionEnabled,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
               ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductSearchCard extends StatelessWidget {
+  const _ProductSearchCard({
+    required this.controller,
+    required this.useSystemKeyboard,
+    required this.onSearch,
+    required this.previewLoader,
+  });
+
+  final TextEditingController controller;
+  final bool useSystemKeyboard;
+  final VoidCallback onSearch;
+  final OperationalKeyboardPreviewLoader previewLoader;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final field = OperationalKeyboardTextField(
+              controller: controller,
+              useSystemKeyboard: useSystemKeyboard,
+              title: 'informe o produto',
+              labelText: 'Produto, codigo ou barras',
+              prefixIcon: Icons.search_outlined,
+              mode: OperationalKeyboardMode.numeric,
+              color: _productColor,
+              allowAlphaSwitch: true,
+              clearOnOpen: true,
+              textInputAction: TextInputAction.search,
+              showListAction: true,
+              onConfirm: onSearch,
+              onList: onSearch,
+              previewLoader: previewLoader,
+            );
+            final button = useSystemKeyboard
+                ? FilledButton.icon(
+                    onPressed: onSearch,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _productColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.search),
+                    label: const Text('Pesquisar'),
+                  )
+                : null;
+
+            if (constraints.maxWidth < 420) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  field,
+                  if (button != null) ...[const SizedBox(height: 12), button],
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: field),
+                if (button != null) ...[const SizedBox(width: 12), button],
+              ],
+            );
+          },
         ),
       ),
     );

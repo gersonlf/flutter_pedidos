@@ -500,68 +500,68 @@ class _CommandSelectionPageState extends State<CommandSelectionPage> {
         label: const Text('Adicionar'),
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        child: Column(
           children: [
-            _CommandInputCard(
-              controller: _commandController,
-              employee: widget.employee,
-              useSystemKeyboard: widget.config.physicalKeyboardEnabled,
-              consulting: _consulting,
-              onConsult: _consultTypedCommand,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: _CommandInputCard(
+                controller: _commandController,
+                employee: widget.employee,
+                useSystemKeyboard: widget.config.physicalKeyboardEnabled,
+                consulting: _consulting,
+                onConsult: _consultTypedCommand,
+              ),
             ),
-            const SizedBox(height: 16),
-            FutureBuilder<List<Comanda>>(
-              future: _commandsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+            Expanded(
+              child: FutureBuilder<List<Comanda>>(
+                future: _commandsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                if (snapshot.hasError) {
-                  return _CommandError(
-                    message: snapshot.error.toString(),
-                    onRetry: _reload,
-                  );
-                }
+                  if (snapshot.hasError) {
+                    return _CommandError(
+                      message: snapshot.error.toString(),
+                      onRetry: _reload,
+                    );
+                  }
 
-                final commands = snapshot.data ?? const <Comanda>[];
-                if (commands.isEmpty) {
-                  return _CommandError(
-                    message: 'Nenhuma comanda aberta encontrada.',
-                    onRetry: _reload,
-                  );
-                }
+                  final commands = snapshot.data ?? const <Comanda>[];
+                  if (commands.isEmpty) {
+                    return _CommandError(
+                      message: 'Nenhuma comanda aberta encontrada.',
+                      onRetry: _reload,
+                    );
+                  }
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Comandas abertas',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    ...commands.map(
-                      (command) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _CommandTile(
-                          command: command,
-                          enabled: !_consulting && !_busy,
-                          onTap: _consulting || _busy
-                              ? null
-                              : () => _selectCommand(command),
-                          onChangeCommand: () => _changeCommand(command),
-                          onChangeMesa: () => _changeMesa(command),
-                          onDelete: () => _deleteCommand(command),
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                    children: [
+                      Text(
+                        'Comandas abertas',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      ...commands.map(
+                        (command) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _CommandTile(
+                            command: command,
+                            enabled: !_consulting && !_busy,
+                            onTap: _consulting || _busy
+                                ? null
+                                : () => _selectCommand(command),
+                            onChangeCommand: () => _changeCommand(command),
+                            onChangeMesa: () => _changeMesa(command),
+                            onDelete: () => _deleteCommand(command),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),

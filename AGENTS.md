@@ -164,6 +164,7 @@ Na tela de itens, ao tocar em `Adicionar`:
 - Os codigos principais das listas usam marcador eliptico na cor da area: funcionario em laranja, comanda em verde, produto do item em azul e produto da consulta em vermelho.
 - A AppBar da lista de itens deve mostrar apenas `Itens`; o numero da comanda fica no card de resumo abaixo.
 - O atalho de enviar/imprimir comanda para cozinha foi removido da lista de itens por nao corresponder ao comportamento visual do Delphi. O modulo de cozinha continua acessivel pelo menu principal quando habilitado.
+- Nas telas com card de entrada/resumo acima da lista, o card deve ficar fixo no topo e apenas a lista deve rolar: funcionarios, comandas, itens e produtos.
 
 ## Arquivos Alterados No Trabalho Atual
 
